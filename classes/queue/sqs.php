@@ -15,37 +15,61 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Log store interface.
+ * Standard log queue
  *
- * @package    logstore_standardqueued
+ * @package    logqueue_sqs
+ * @author     Srdjan Janković
  * @copyright  Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace logstore_standardqueued\local\queue;
+namespace logstore_standardqueued\queue;
 
 defined('MOODLE_INTERNAL') || die();
 
-interface queue_interface {
+class sqs implements queue_interface {
+    /** @var array $deps list of dependancies */
+    public static $deps = ['aws'];
+
+    /** @var string $logguests true if logging guest access */
+    protected $logguests;
+
+    public function __construct() {
+    }
+
+    /**
+     * A line describing the queue and its config.
+     *
+     * @return string
+     */
+    public function details() {
+        return "sqs";
+    }
+
     /**
      * Push the events to the queue.
      *
      * @param array $evententries raw event data
      */
-    public function push_entries(array $evententries);
+    public function push_entries(array $evententries) {
+        throw new \Exception("A");
+    }
 
     /**
      * Pull the events from the queue.
      *
      * @param int $num max number of events to pull
-     * @return array $evententries raw event data
      */
-    public function pull_entries($num=null);
+    public function pull_entries($num=null) {
+        throw new \Exception("A");
+    }
 
     /**
      * Can we use this queue?
      *
      * @return bool
      */
-    public function is_configured();
+    public function is_configured() {
+        return true;
+    }
 }

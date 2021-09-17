@@ -27,6 +27,9 @@ require __DIR__ . "/../standard/settings.php";
 if ($hassiteconfig) {
     $configuredqueue = logstore_standardqueued\log\store::configured_queue();
     if ($configuredqueue) {
+        $info = $OUTPUT->notification(get_string('queue', 'logstore_standardqueued', $configuredqueue->details()), 'notify');
+        $settings->add(new admin_setting_heading('logstore_standardqueued/queue', '', $info));
+
         foreach ($configuredqueue->deps as $dep) {
             switch ($dep) {
                 case 'aws':

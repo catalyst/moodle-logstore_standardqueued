@@ -49,7 +49,7 @@ class store extends base_store {
      */
     public static function configured_queue() {
         foreach (self::$queueclasses as $cls) {
-            $class = "\\logstore_standardqueued\\local\\queue\\$cls";
+            $class = "\\logstore_standardqueued\\queue\\$cls";
             $q = new $class();
             if ($q->is_configured()) {
                 return $q;

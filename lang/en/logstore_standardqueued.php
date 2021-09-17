@@ -27,3 +27,4 @@ $string['pluginname_desc'] = 'Standard log with queueing middleware.';
 $string['taskpull'] = 'Log table load from the queue';
 $string['awssdkrequired'] = 'The local_aws plugin leveraging the AWS SDK is required to use this factor. Please install local_aws.';
 $string['notconfigured'] = 'Queue details are not configured properly in the config file "logqueue" array, queueing will not be used.';
+$string['queue'] = 'Queue details: {$a}';
