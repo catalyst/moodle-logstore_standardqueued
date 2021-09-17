@@ -27,20 +27,50 @@ namespace logstore_standardqueued\log;
 
 defined('MOODLE_INTERNAL') || die();
 
-use core_component, core_plugin_manager;
+use Exception;
+use moodle_exception;
+
+use tool_log\log\manager;
+use logstore_standardqueued\queue\queue_interface;
+
 use logstore_standard\log\store as base_store;
 
 class store extends base_store {
-    /** @var array $queues configired queues */
-    protected $queues = [];
+    /** @var array $queueclasses in the order of preference XXX config? */
+    public static $queueclasses = ['sqs'];
 
-    public function __construct(\tool_log\log\manager $manager) {
+    /** @var queue_interface $queue configired queue */
+    protected $queue;
+
+    /**
+     * Push the events to the queue.
+     *
+     * @param array $evententries raw event data
+     */
+    public static function configured_queue() {
+        foreach (self::$queueclasses as $cls) {
+            $class = "\\logstore_standardqueued\\local\\queue\\$cls";
+            $q = new $class();
+            if ($q->is_configured()) {
+                return $q;
+            }
+        }
+    }
+
+    public function __construct(manager $manager) {
+        // We pretend that we are logstore_standard.
+        $replacing = 'logstore_standard';
+
+        $plugins = get_config('tool_log', 'enabled_stores');
+        if (in_array($replacing, explode(',', $plugins))) {
+            throw new moodle_exception("Cannot have both logstore_standardqueued and $replacing plugins enabled");
+        }
+
         parent::__construct($manager);
 
-        foreach (core_plugin_manager::instance()->get_plugins_of_type('logqueue') as $plugin) {
-        }
-        foreach(core_component::get_plugin_list_with_class('logqueue', 'queue') as $transport) {
-        }
+        $this->component = $replacing;
+        $this->buffersize = $this->get_config('buffersize', 50);
+        $this->queue = self::configured_queue();
     }
 
     /**
@@ -49,12 +79,29 @@ class store extends base_store {
      * @param array $evententries raw event data
      */
     protected function insert_event_entries($evententries) {
-        throw new Exception("A");
+        if ($this->queue) {
+            try {
+                return $this->queue->push_entries($evententries);
+            } catch (Exception $e) {
+                // log
+            }
+        }
+
+        // Fallback to standard non-queued behaviour.
         $this->insert_queued_event_entries($evententries);
     }
 
     /**
-     * Finally store the events into the database.
+     * Pull the events from the queue and store them.
+     */
+    public function store_queued_event_entries() {
+        if ($this->queue) {
+            $this->insert_queued_event_entries($this->queue->pull_entries());
+        }
+    }
+
+    /**
+     * Store the events into the database.
      *
      * @param array $evententries raw event data
      */

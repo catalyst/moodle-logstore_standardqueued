@@ -30,17 +30,73 @@ require_once(__DIR__ . '/fixtures/store.php');
 
 class logstore_standardqueued_store_testcase extends advanced_testcase {
     /**
-     * Tests log writing.
+     * Tests queued log writing with a well behaved queue.
      *
-     * @param bool $jsonformat True to test with JSON format
      * @throws moodle_exception
      */
-    public function test_queued_log_writing_no_queue() {
+    public function test_queued_log_writing_good_queue() {
         global $DB;
         $this->resetAfterTest();
         $this->preventResetByRollback(); // Logging waits till the transaction gets committed.
 
-        \logstore_standardqueued_test\log\test_queue::$configured = false;
+        \logstore_standardqueued_test\log\store::$bad = false;
+
+        // Apply JSON format system setting.
+        set_config('jsonformat', 1, 'logstore_standard');
+        set_config('buffersize', 0, 'logstore_standard');
+        set_config('logguests', 1, 'logstore_standard');
+
+        $this->setAdminUser();
+        $user1 = $this->getDataGenerator()->create_user();
+        $user2 = $this->getDataGenerator()->create_user();
+        $course1 = $this->getDataGenerator()->create_course();
+        $module1 = $this->getDataGenerator()->create_module('resource', array('course' => $course1));
+        $course2 = $this->getDataGenerator()->create_course();
+        $module2 = $this->getDataGenerator()->create_module('resource', array('course' => $course2));
+
+        // Enable logging plugin.
+        set_config('enabled_stores', 'logstore_standardqueued_test', 'tool_log');
+        $manager = get_log_manager(true);
+
+        $stores = $manager->get_readers();
+        $this->assertCount(1, $stores);
+        $this->assertEquals(['logstore_standardqueued_test'], array_keys($stores));
+        /** @var \logstore_standard\log\store $store */
+        $store = $stores['logstore_standardqueued_test'];
+        $this->assertInstanceOf('tool_log\log\writer', $store);
+        $this->assertTrue($store->is_logging());
+
+        $logs = $DB->get_records('logstore_standard_log', array(), 'id ASC');
+        $this->assertCount(0, $logs);
+
+        $this->setCurrentTimeStart();
+
+        $this->setUser(0);
+        $event1 = \logstore_standard\event\unittest_executed::create(
+            array('context' => context_module::instance($module1->cmid), 'other' => array('sample' => 5, 'xx' => 10)));
+        $event1->trigger();
+
+        $logs = $DB->get_records('logstore_standard_log', array(), 'id ASC');
+        $this->assertCount(0, $logs);
+
+        // Verbatim from \logstore_standardqueued\task\pull_task::execute().
+        $store = new \logstore_standardqueued_test\log\store($manager);
+        $store->store_queued_event_entries();
+
+        $this->assertEquals(1, $DB->count_records('logstore_standard_log'));
+    }
+
+    /**
+     * Tests queued log writing with a misbehaving queue.
+     *
+     * @throws moodle_exception
+     */
+    public function test_queued_log_writing_bad_queue() {
+        global $DB;
+        $this->resetAfterTest();
+        $this->preventResetByRollback(); // Logging waits till the transaction gets committed.
+
+        \logstore_standardqueued_test\log\store::$bad = true;
 
         // Apply JSON format system setting.
         set_config('jsonformat', 1, 'logstore_standard');
@@ -79,19 +135,5 @@ class logstore_standardqueued_store_testcase extends advanced_testcase {
 
         $logs = $DB->get_records('logstore_standard_log', array(), 'id ASC');
         $this->assertCount(1, $logs);
-    }
-
-    /**
-     * Test that the standard log pull works correctly.
-     */
-    public function X_test_pull_task() {
-        global $DB;
-
-        $this->resetAfterTest();
-
-        $pull = new \logstore_standardqueued\task\pull_task();
-        $pull->execute();
-
-        $this->assertEquals(1, $DB->count_records('logstore_standard_log'));
     }
 }

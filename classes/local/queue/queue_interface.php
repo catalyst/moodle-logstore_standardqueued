@@ -15,19 +15,37 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Standard log store.
+ * Log store interface.
  *
- * @package    logqueue_sqs
- * @subpackage logstore_standardqueued
- * @author     Srdjan Janković
+ * @package    logstore_standardqueued
  * @copyright  Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace logstore_standardqueued\local\queue;
+
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2021091500; // The current plugin version (Date: YYYYMMDDXX).
-$plugin->requires = 2020061509; // Requires this Moodle version.
-$plugin->component = 'logqueue_sqs'; // Full name of the plugin (used for diagnostics).
-$plugin->release = 'v0.1';
-$plugin->dependencies = array('local_aws' => 2020112000);
+interface queue_interface {
+    /**
+     * Push the events to the queue.
+     *
+     * @param array $evententries raw event data
+     */
+    public function push_entries(array $evententries);
+
+    /**
+     * Pull the events from the queue.
+     *
+     * @param int $num max number of events to pull
+     * @return array $evententries raw event data
+     */
+    public function pull_entries($num=null);
+
+    /**
+     * Can we use this queue?
+     *
+     * @return bool
+     */
+    public function is_configured();
+}

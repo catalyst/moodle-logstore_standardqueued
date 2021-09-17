@@ -17,7 +17,7 @@
 /**
  * Standard log queue
  *
- * @package    logqueue_sqs
+ * @package    logstore_standardqueued
  * @author     Srdjan Janković
  * @copyright  Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -25,21 +25,27 @@
 
 namespace logstore_standardqueued_test\log;
 
+use Exception;
+use tool_log\log\manager, logstore_standardqueued\queue\queue_interface;
+
+use logstore_standardqueued\log\store as tested_store;
+
 defined('MOODLE_INTERNAL') || die();
 
-class store extends \logstore_standardqueued\log\store {
+class store extends tested_store {
+    /** @var bool */
+    public static $bad = false;
+
     public function __construct(\tool_log\log\manager $manager) {
         parent::__construct($manager);
 
-        $this->queues = ['test_queue' => new test_queue()];
+        $this->queue = self::$bad ? (new test_queue_bad()) : (new test_queue_good());
     }
 }
 
-class test_queue implements \logstore_standardqueued\queue {
-    /** @var bool */
-    public static $configured = true;
+class test_queue_good implements queue_interface {
     /** @var array $events */
-    private $events = [];
+    private static $events = [];
 
     /**
      * Push the events to the queue.
@@ -47,7 +53,7 @@ class test_queue implements \logstore_standardqueued\queue {
      * @param array $evententries raw event data
      */
     public function push_entries(array $evententries) {
-        $this->events = array_merge($this->events, $evententries);
+        self::$events = array_merge(self::$events, $evententries);
     }
 
     /**
@@ -57,9 +63,9 @@ class test_queue implements \logstore_standardqueued\queue {
      */
     public function pull_entries($num=null) {
         if (!$num) {
-            $num = count($this->events);
+            $num = count(self::$events);
         }
-        return array_splice($this->events, 0, $num);
+        return array_splice(self::$events, 0, $num);
     }
 
     /**
@@ -68,6 +74,35 @@ class test_queue implements \logstore_standardqueued\queue {
      * @return bool
      */
     public function is_configured() {
-        return self::$configured;
+        return true;
+    }
+}
+
+class test_queue_bad implements queue_interface {
+    /**
+     * Push the events to the queue.
+     *
+     * @param array $evententries raw event data
+     */
+    public function push_entries(array $evententries) {
+        throw new Exception("I'm bad");
+    }
+
+    /**
+     * Pull the events from the queue.
+     *
+     * @param int $num max number of events to pull
+     */
+    public function pull_entries($num=null) {
+        return [];
+    }
+
+    /**
+     * Can we use this queue?
+     *
+     * @return bool
+     */
+    public function is_configured() {
+        return true;
     }
 }

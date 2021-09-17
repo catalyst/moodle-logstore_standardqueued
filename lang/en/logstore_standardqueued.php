@@ -25,18 +25,5 @@
 $string['pluginname'] = 'Standard log queued';
 $string['pluginname_desc'] = 'Standard log with queueing middleware.';
 $string['taskpull'] = 'Log table load from the queue';
-/*
-$string['buffersize'] = 'Write buffer size';
-$string['jsonformat'] = 'JSON format';
-$string['jsonformat_desc'] = 'Use standard JSON format instead of PHP serialised data in the \'other\' database field.';
-$string['privacy:metadata:log'] = 'A collection of past events';
-$string['privacy:metadata:log:anonymous'] = 'Whether the event was flagged as anonymous';
-$string['privacy:metadata:log:eventname'] = 'The event name';
-$string['privacy:metadata:log:ip'] = 'The IP address used at the time of the event';
-$string['privacy:metadata:log:origin'] = 'The origin of the event';
-$string['privacy:metadata:log:other'] = 'Additional information about the event';
-$string['privacy:metadata:log:realuserid'] = 'The ID of the real user behind the event, when masquerading a user.';
-$string['privacy:metadata:log:relateduserid'] = 'The ID of a user related to this event';
-$string['privacy:metadata:log:timecreated'] = 'The time when the event occurred';
-$string['privacy:metadata:log:userid'] = 'The ID of the user who triggered this event';
- */
+$string['awssdkrequired'] = 'The local_aws plugin leveraging the AWS SDK is required to use this factor. Please install local_aws.';
+$string['notconfigured'] = 'Queue details are not configured properly in the config file "logqueue" array, queueing will not be used.';

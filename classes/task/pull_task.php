@@ -26,7 +26,11 @@ namespace logstore_standardqueued\task;
 
 defined('MOODLE_INTERNAL') || die();
 
-class pull_task extends \core\task\scheduled_task {
+use logstore_standardqueued\log\store;
+
+use core\task\scheduled_task;
+
+class pull_task extends scheduled_task {
 
     /**
      * Get a descriptive name for this task (shown to admins).
@@ -42,6 +46,9 @@ class pull_task extends \core\task\scheduled_task {
      * Throw exceptions on errors (the job will be retried).
      */
     public function execute() {
+        $store = new store(get_log_manager());
+        $store->store_queued_event_entries();
+
         mtrace(" Pulled log records from the queue.");
     }
 }

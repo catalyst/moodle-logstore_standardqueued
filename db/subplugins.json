@@ -1,5 +1,0 @@
-{
-    "plugintypes": {
-        "logqueue": "admin\/tool\/log\/store\/standardqueued\/queue"
-    }
-}
