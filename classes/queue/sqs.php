@@ -17,7 +17,7 @@
 /**
  * Standard log queue
  *
- * @package    logqueue_sqs
+ * @package    logstore_standardqueued
  * @author     Srdjan Janković
  * @copyright  Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -27,14 +27,64 @@ namespace logstore_standardqueued\queue;
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once($CFG->dirroot . '/local/aws/sdk/aws-autoloader.php');
+use Aws\Sqs\SqsClient, Aws\Exception\AwsException;
+
+use Exception, JsonException;
+
 class sqs implements queue_interface {
     /** @var array $deps list of dependancies */
     public static $deps = ['aws'];
 
-    /** @var string $logguests true if logging guest access */
-    protected $logguests;
+    /** @var string $configerror set in case of misconfiguration */
+    public $configerror;
+
+    /** @var string $queueurl AWS SQS queue url */
+    protected $queueurl;
+
+    /** @var SqsClient $client AWS SQS api client */
+    protected $client;
 
     public function __construct() {
+        global $CFG;
+
+        if (isset($CFG->logstore_standardqueued['sqs'])) {
+            $config = $CFG->logstore_standardqueued['sqs'];
+
+            try {
+                $this->queueurl = $config['queue_url'];
+
+                // Setup client params and instantiate client.
+                $params = [
+                    'version' => 'latest',
+                    'http' => ['proxy' => \local_aws\local\aws_helper::get_proxy_string()],
+                ];
+                if (isset($config['aws_region'])) {
+                    $params['region'] = $config['aws_region'];
+                }
+                if (isset($config['aws_key'])) {
+                    $params['credentials'] = [
+                        'key' => $config['aws_key'],
+                        'secret' => $config['aws_secret']
+                    ];
+                }
+
+                $client = new SqsClient($params);
+
+                // Test the queue.
+                $client->receiveMessage([
+                    'QueueUrl' => $this->queueurl,
+                    'MaxNumberOfMessages' => 1,
+                    'VisibilityTimeout' => 0,
+                ]);
+
+                $this->client = $client;
+            } catch (AwsException $e) {
+                $this->configerror = $e->getAwsErrorMessage();
+            } catch (Exception $e) {
+                $this->configerror = $e->getMessage();
+            }
+        }
     }
 
     /**
@@ -43,7 +93,22 @@ class sqs implements queue_interface {
      * @return string
      */
     public function details() {
-        return "sqs";
+        return "sqs ".$this->queueurl;
+    }
+
+    /**
+     * Push the event to the queue.
+     *
+     * @param array $evententry raw event data
+     */
+    public function push_entry(array $evententry) {
+        $this->client->sendMessage([
+            'QueueUrl' => $this->queueurl,
+            'MessageBody' => json_encode(
+                $evententry,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+            ),
+        ]);
     }
 
     /**
@@ -52,7 +117,26 @@ class sqs implements queue_interface {
      * @param array $evententries raw event data
      */
     public function push_entries(array $evententries) {
-        throw new \Exception("A");
+        $entries = [];
+        foreach ($evententries as $id => $entry) {
+            $entries[] = [
+                'Id' => $id,
+                'MessageBody' => json_encode(
+                    $entry,
+                    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+                ),
+            ];
+        }
+
+        $res = $this->client->sendMessageBatch([
+            'QueueUrl' => $this->queueurl,
+            'Entries' => $entries,
+        ]);
+
+        if ($res['Failed']) {
+            var_dump($res['Failed']);
+            throw new Exception("Failed");
+        }
     }
 
     /**
@@ -61,7 +145,56 @@ class sqs implements queue_interface {
      * @param int $num max number of events to pull
      */
     public function pull_entries($num=null) {
-        throw new \Exception("A");
+        $awsmax = 10;  # Max messages that AWS is willing to return in one go.
+        $max = $num && $num < $awsmax ? $num : $awsmax;
+
+        $pulled = [];
+        while (true) {
+            $res = $this->client->receiveMessage([
+                'QueueUrl' => $this->queueurl,
+                'MaxNumberOfMessages' => $max,
+            ]);
+
+            $msgs = $res['Messages'];
+            if (!$msgs || count($msgs) == 0) {
+                break;
+            }
+
+            foreach ($msgs as $msg) {
+                $body = $msg['Body'];
+                $md5 = $msg['MD5OfBody'];
+                $id = $msg['MessageId'];
+                $rh = $msg['ReceiptHandle'];
+
+                try {
+                    $this->client->deleteMessage([
+                        'QueueUrl' => $this->queueurl,
+                        'ReceiptHandle' => $rh,
+                    ]);
+                } catch (AwsException $e) {
+                    // log
+                    continue;
+                }
+
+                if (md5($body) != $md5) {
+                    // log
+                    continue;
+                }
+
+                try {
+                    $pulled[] = json_decode($body,  JSON_THROW_ON_ERROR);
+                } catch (JsonException $e) {
+                    // log
+                    // Nothing we can do about it at this stage.
+                    continue;
+                }
+            }
+
+            if ($num && count($pulled) >= $num) {
+                break;
+            }
+        }
+        return $pulled;
     }
 
     /**
@@ -70,6 +203,6 @@ class sqs implements queue_interface {
      * @return bool
      */
     public function is_configured() {
-        return true;
+        return $this->client;
     }
 }

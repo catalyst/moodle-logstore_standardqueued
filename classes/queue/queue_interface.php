@@ -35,11 +35,11 @@ interface queue_interface {
     public function details();
 
     /**
-     * Push the events to the queue.
+     * Push the event to the queue.
      *
-     * @param array $evententries raw event data
+     * @param array $evententry raw event data
      */
-    public function push_entries(array $evententries);
+    public function push_entry(array $evententry);
 
     /**
      * Pull the events from the queue.

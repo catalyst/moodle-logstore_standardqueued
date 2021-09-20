@@ -39,6 +39,9 @@ class store extends base_store {
     /** @var array $queueclasses in the order of preference XXX config? */
     public static $queueclasses = ['sqs'];
 
+    /** @var array $configerrors queue config errors */
+    public static $configerrors = [];
+
     /** @var queue_interface $queue configired queue */
     protected $queue;
 
@@ -48,11 +51,16 @@ class store extends base_store {
      * @param array $evententries raw event data
      */
     public static function configured_queue() {
+        self::$configerrors = [];
         foreach (self::$queueclasses as $cls) {
             $class = "\\logstore_standardqueued\\queue\\$cls";
             $q = new $class();
             if ($q->is_configured()) {
                 return $q;
+            } else {
+                if ($q->configerror) {
+                    self::$configerrors[] = $q->configerror;
+                }
             }
         }
     }
@@ -79,16 +87,24 @@ class store extends base_store {
      * @param array $evententries raw event data
      */
     protected function insert_event_entries($evententries) {
+        $errorentries = [];
         if ($this->queue) {
-            try {
-                return $this->queue->push_entries($evententries);
-            } catch (Exception $e) {
-                // log
+            foreach ($evententries as $entry) {
+                try {
+                    $this->queue->push_entry($entry);
+                } catch (Exception $e) {
+                    // log
+                    $errorentries[] = $entry;
+                }
             }
+        } else {
+            $errorentries = $evententries;
         }
 
-        // Fallback to standard non-queued behaviour.
-        $this->insert_queued_event_entries($evententries);
+        if ($errorentries) {
+            // Fallback to standard non-queued behaviour.
+            $this->insert_queued_event_entries($errorentries);
+        }
     }
 
     /**

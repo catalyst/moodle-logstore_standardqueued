@@ -48,12 +48,21 @@ class test_queue_good implements queue_interface {
     private static $events = [];
 
     /**
-     * Push the events to the queue.
+     * A line describing the queue and its config.
      *
-     * @param array $evententries raw event data
+     * @return string $info informational string about the queue.
      */
-    public function push_entries(array $evententries) {
-        self::$events = array_merge(self::$events, $evententries);
+    public function details() {
+        return "test_queue good";
+    }
+
+    /**
+     * Push the event to the queue.
+     *
+     * @param array $evententry raw event data
+     */
+    public function push_entry(array $evententry) {
+        self::$events[] = $evententry;
     }
 
     /**
@@ -80,11 +89,20 @@ class test_queue_good implements queue_interface {
 
 class test_queue_bad implements queue_interface {
     /**
-     * Push the events to the queue.
+     * A line describing the queue and its config.
      *
-     * @param array $evententries raw event data
+     * @return string $info informational string about the queue.
      */
-    public function push_entries(array $evententries) {
+    public function details() {
+        return "test_queue bad";
+    }
+
+    /**
+     * Push the event to the queue.
+     *
+     * @param array $evententry raw event data
+     */
+    public function push_entry(array $evententry) {
         throw new Exception("I'm bad");
     }
 

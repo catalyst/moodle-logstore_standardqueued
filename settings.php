@@ -30,7 +30,7 @@ if ($hassiteconfig) {
         $info = $OUTPUT->notification(get_string('queue', 'logstore_standardqueued', $configuredqueue->details()), 'notify');
         $settings->add(new admin_setting_heading('logstore_standardqueued/queue', '', $info));
 
-        foreach ($configuredqueue->deps as $dep) {
+        foreach ($configuredqueue::$deps as $dep) {
             switch ($dep) {
                 case 'aws':
                     if (!file_exists($CFG->dirroot . '/local/aws/classes/admin_settings_aws_region.php')) {
@@ -41,7 +41,10 @@ if ($hassiteconfig) {
             }
         }
     } else {
-        $warning = $OUTPUT->notification(get_string('notconfigured', 'logstore_standardqueued'), 'notifyerror');
+        $warning = $OUTPUT->notification(
+            get_string('notconfigured', 'logstore_standardqueued', implode("; ", logstore_standardqueued\log\store::$configerrors)),
+            'notifyerror'
+        );
         $settings->add(new admin_setting_heading('logstore_standardqueued/notconfigured', '', $warning));
     }
 }
