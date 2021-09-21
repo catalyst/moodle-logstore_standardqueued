@@ -33,6 +33,37 @@ class logstore_standardqueued_store_testcase extends advanced_testcase {
     protected $oldlog;
 
     /**
+     * Tests queued log not used when both logstore_standardqueued and logstore_standard are enabled.
+     *
+     * @throws moodle_exception
+     */
+    public function test_both_plugins_enabled() {
+        $this->resetAfterTest();
+
+        // Enable both logging plugins.
+        set_config('enabled_stores', 'logstore_standard,logstore_standardqueued', 'tool_log');
+        $manager = get_log_manager(true);
+
+        $stores = $manager->get_readers();
+        $this->assertCount(2, $stores);
+        /** @var \logstore_standard\log\store $store */
+        $store = $stores['logstore_standardqueued'];
+        $this->assertInstanceOf('tool_log\log\writer', $store);
+        $this->assertFalse($store->is_logging());
+
+        // Enable both logging plugins.
+        set_config('enabled_stores', 'logstore_standardqueued', 'tool_log');
+        $manager = get_log_manager(true);
+
+        $stores = $manager->get_readers();
+        $this->assertCount(1, $stores);
+        /** @var \logstore_standard\log\store $store */
+        $store = $stores['logstore_standardqueued'];
+        $this->assertInstanceOf('tool_log\log\writer', $store);
+        $this->assertTrue($store->is_logging());
+    }
+
+    /**
      * Tests queued log writing with a well behaved queue.
      *
      * @throws moodle_exception
