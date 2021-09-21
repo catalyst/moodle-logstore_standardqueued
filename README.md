@@ -49,21 +49,25 @@ dequeueing them and batch inserting them.
 
 Configuring is done in `config.php`:
 
-    $CFG->logstore_standardqueued = [
-        '<queue>' => [params...]
-    ];
+```php
+$CFG->logstore_standardqueued = [
+    '<queue>' => [params...]
+];
+```
 
 ## Queues supported
 
 ### SQS
 
-    $CFG->logstore_standardqueued = [
-        'sqs' => [
-            'aws_region' => '<region>',
-            'queue_url' => 'https://sqs.ap-southeast-2.amazonaws.com/XXXX/some-queue',
-            'aws_key' => '<key>',
-            'aws_secret' => '<secret>',
-        ]
-    ];
+```php
+$CFG->logstore_standardqueued = [
+    'sqs' => [
+        'aws_region' => '<region>',
+        'queue_url' => 'https://sqs.ap-southeast-2.amazonaws.com/XXXX/some-queue',
+        'aws_key' => '<key>',
+        'aws_secret' => '<secret>',
+    ]
+];
+```
 
 `aws_key` and `aws_secret` are preferrably set in the env.
