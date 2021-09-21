@@ -22,14 +22,16 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use logstore_standardqueued\log\store;
+
 require __DIR__ . "/../standard/settings.php";
 
 if ($hassiteconfig) {
-    if (logstore_standardqueued\log\store::both_logstore_standard_enabled()) {
+    if (store::both_logstore_standard_enabled()) {
         $warning = $OUTPUT->notification(get_string('bothconfigured', 'logstore_standardqueued'), 'notifyerror');
         $settings->add(new admin_setting_heading('logstore_standardqueued/bothconfigured', '', $warning));
     } else {
-        $configuredqueue = logstore_standardqueued\log\store::configured_queue();
+        $configuredqueue = store::configured_queue();
         if ($configuredqueue) {
             $info = $OUTPUT->notification(get_string('queue', 'logstore_standardqueued', $configuredqueue->details()), 'notify');
             $settings->add(new admin_setting_heading('logstore_standardqueued/queue', '', $info));
@@ -38,7 +40,10 @@ if ($hassiteconfig) {
                 switch ($dep) {
                     case 'aws':
                         if (!file_exists($CFG->dirroot . '/local/aws/classes/admin_settings_aws_region.php')) {
-                            $warning = $OUTPUT->notification(get_string('awssdkrequired', 'logstore_standardqueued'), 'notifyerror');
+                            $warning = $OUTPUT->notification(
+                                get_string('awssdkrequired', 'logstore_standardqueued'),
+                                'notifyerror'
+                            );
                             $settings->add(new admin_setting_heading('logstore_standardqueued/awssdkwarning', '', $warning));
                         }
                         break;
@@ -46,7 +51,7 @@ if ($hassiteconfig) {
             }
         } else {
             $warning = $OUTPUT->notification(
-                get_string('notconfigured', 'logstore_standardqueued', implode("; ", logstore_standardqueued\log\store::$configerrors)),
+                get_string('notconfigured', 'logstore_standardqueued', implode("; ", store::$configerrors)),
                 'notifyerror'
             );
             $settings->add(new admin_setting_heading('logstore_standardqueued/notconfigured', '', $warning));

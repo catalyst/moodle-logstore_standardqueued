@@ -26,7 +26,8 @@
 namespace logstore_standardqueued_test\log;
 
 use Exception;
-use tool_log\log\manager, logstore_standardqueued\queue\queue_interface;
+use tool_log\log\manager;
+use logstore_standardqueued\queue\queue_interface;
 
 use logstore_standardqueued\log\store as tested_store;
 
@@ -49,7 +50,7 @@ class store extends tested_store {
      *
      * @param \tool_log\log\manager $manager Log manages.
      */
-    public function __construct(\tool_log\log\manager $manager) {
+    public function __construct(manager $manager) {
         parent::__construct($manager);
 
         $this->queue = self::$bad ? (new test_queue_bad()) : (new test_queue_good());

@@ -143,7 +143,9 @@ class logstore_standardqueued_store_testcase extends advanced_testcase {
         ini_set('error_log', $this->oldlog);
         $msg = trim(file_get_contents($tmplog));
         unlink($tmplog);
-        $this->assertStringEndsWith("logstore_standardqueued: Failed to push event to the queue: ".$store->exception_message(), $msg);
+        $this->assertStringEndsWith(
+            "logstore_standardqueued: Failed to push event to the queue: ".$store->exception_message(), $msg
+        );
 
         $logs = $DB->get_records('logstore_standard_log', array(), 'id ASC');
         $this->assertCount(1, $logs);

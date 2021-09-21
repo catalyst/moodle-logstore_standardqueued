@@ -37,4 +37,6 @@ use logstore_standard\privacy\provider as base_provider;
  * @author     Srdjan Janković
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class provider extends base_provider {}
+class provider extends base_provider {
+
+}
