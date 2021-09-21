@@ -30,6 +30,13 @@ use logstore_standardqueued\log\store;
 
 use core\task\scheduled_task;
 
+/**
+ * Standard log reader/writer.
+ *
+ * @package    logstore_standardqueued
+ * @copyright  Catalyst IT
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class pull_task extends scheduled_task {
 
     /**

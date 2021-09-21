@@ -35,6 +35,14 @@ use logstore_standardqueued\queue\queue_interface;
 
 use logstore_standard\log\store as base_store;
 
+/**
+ * Standard log reader/writer.
+ *
+ * @package    logstore_standardqueued
+ * @author     Srdjan Janković
+ * @copyright  Catalyst IT
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class store extends base_store {
     /** @var string $replacing We pretend that we are logstore_standard */
     public static $replacing = 'logstore_standard';
@@ -50,8 +58,6 @@ class store extends base_store {
 
     /**
      * Push the events to the queue.
-     *
-     * @param array $evententries raw event data
      */
     public static function configured_queue() {
         self::$configerrors = [];
@@ -78,6 +84,11 @@ class store extends base_store {
         return in_array(self::$replacing, explode(',', $plugins));
     }
 
+    /**
+     * Store constructor.
+     *
+     * @param \tool_log\log\manager $manager Log manages.
+     */
     public function __construct(manager $manager) {
         parent::__construct($manager);
 
@@ -109,7 +120,7 @@ class store extends base_store {
                 try {
                     $this->queue->push_entry($entry);
                 } catch (Exception $e) {
-                    error_log(
+                    debugging(
                         "logstore_standardqueued: Failed to push event to the queue: ".
                         $e->getMessage()
                     );

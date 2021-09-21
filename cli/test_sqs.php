@@ -28,7 +28,7 @@ define('CACHE_DISABLE_ALL', true);
 require(__DIR__.'/../../../../../../config.php');
 require_once($CFG->libdir.'/clilib.php');
 
-$test_event = [
+$testevent = [
     'eventname' => "\\logstore_standardqueued\\event\\test",
     'component' => "logstore_standardqueued",
     'action' => "action",
@@ -57,7 +57,7 @@ if (!$q->is_configured()) {
 }
 
 $now = microtime(true);
-$q->push_entry($test_event);
+$q->push_entry($testevent);
 echo "Push: ".(microtime(true) - $now)."\n";
 sleep(2);
 $entries = $q->pull_entries();
@@ -66,7 +66,7 @@ if (count($entries) != 1) {
     var_dump($entries);
 } else {
     $ok = true;
-    foreach ($test_event as $k => $v) {
+    foreach ($testevent as $k => $v) {
         if (!array_key_exists($k, $entries[0])) {
             echo "$k: missing\n";
             $ok = false;
