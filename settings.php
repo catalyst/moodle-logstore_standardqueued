@@ -25,26 +25,31 @@
 require __DIR__ . "/../standard/settings.php";
 
 if ($hassiteconfig) {
-    $configuredqueue = logstore_standardqueued\log\store::configured_queue();
-    if ($configuredqueue) {
-        $info = $OUTPUT->notification(get_string('queue', 'logstore_standardqueued', $configuredqueue->details()), 'notify');
-        $settings->add(new admin_setting_heading('logstore_standardqueued/queue', '', $info));
-
-        foreach ($configuredqueue::$deps as $dep) {
-            switch ($dep) {
-                case 'aws':
-                    if (!file_exists($CFG->dirroot . '/local/aws/classes/admin_settings_aws_region.php')) {
-                        $warning = $OUTPUT->notification(get_string('awssdkrequired', 'logstore_standardqueued'), 'notifyerror');
-                        $settings->add(new admin_setting_heading('logstore_standardqueued/awssdkwarning', '', $warning));
-                    }
-                    break;
-            }
-        }
+    if (logstore_standardqueued\log\store::both_logstore_standard_enabled()) {
+        $warning = $OUTPUT->notification(get_string('bothconfigured', 'logstore_standardqueued'), 'notifyerror');
+        $settings->add(new admin_setting_heading('logstore_standardqueued/bothconfigured', '', $warning));
     } else {
-        $warning = $OUTPUT->notification(
-            get_string('notconfigured', 'logstore_standardqueued', implode("; ", logstore_standardqueued\log\store::$configerrors)),
-            'notifyerror'
-        );
-        $settings->add(new admin_setting_heading('logstore_standardqueued/notconfigured', '', $warning));
+        $configuredqueue = logstore_standardqueued\log\store::configured_queue();
+        if ($configuredqueue) {
+            $info = $OUTPUT->notification(get_string('queue', 'logstore_standardqueued', $configuredqueue->details()), 'notify');
+            $settings->add(new admin_setting_heading('logstore_standardqueued/queue', '', $info));
+
+            foreach ($configuredqueue::$deps as $dep) {
+                switch ($dep) {
+                    case 'aws':
+                        if (!file_exists($CFG->dirroot . '/local/aws/classes/admin_settings_aws_region.php')) {
+                            $warning = $OUTPUT->notification(get_string('awssdkrequired', 'logstore_standardqueued'), 'notifyerror');
+                            $settings->add(new admin_setting_heading('logstore_standardqueued/awssdkwarning', '', $warning));
+                        }
+                        break;
+                }
+            }
+        } else {
+            $warning = $OUTPUT->notification(
+                get_string('notconfigured', 'logstore_standardqueued', implode("; ", logstore_standardqueued\log\store::$configerrors)),
+                'notifyerror'
+            );
+            $settings->add(new admin_setting_heading('logstore_standardqueued/notconfigured', '', $warning));
+        }
     }
 }

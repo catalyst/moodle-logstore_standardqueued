@@ -36,6 +36,9 @@ use logstore_standardqueued\queue\queue_interface;
 use logstore_standard\log\store as base_store;
 
 class store extends base_store {
+    /** @var string $replacing We pretend that we are logstore_standard */
+    public static $replacing = 'logstore_standard';
+
     /** @var array $queueclasses in the order of preference XXX config? */
     public static $queueclasses = ['sqs'];
 
@@ -65,20 +68,33 @@ class store extends base_store {
         }
     }
 
-    public function __construct(manager $manager) {
-        // We pretend that we are logstore_standard.
-        $replacing = 'logstore_standard';
-
+    /**
+     * Check double logstore_standard enablement.
+     *
+     * @return bool true means both logstore_standard and logstore_standardqueued are enabled
+     */
+    public static function both_logstore_standard_enabled() {
         $plugins = get_config('tool_log', 'enabled_stores');
-        if (in_array($replacing, explode(',', $plugins))) {
-            throw new moodle_exception("Cannot have both logstore_standardqueued and $replacing plugins enabled");
-        }
+        return in_array(self::$replacing, explode(',', $plugins));
+    }
 
+    public function __construct(manager $manager) {
         parent::__construct($manager);
 
-        $this->component = $replacing;
+        $this->component = self::$replacing;
         $this->buffersize = $this->get_config('buffersize', 50);
         $this->queue = self::configured_queue();
+    }
+
+    /**
+     * Are the new events appearing in the reader?
+     *
+     * @return bool true means new log events are being added, false means no new data will be added
+     */
+    public function is_logging() {
+        // Only enabled stpres are queried,
+        // this means we can return true here unless store has some extra switch.
+        return !self::both_logstore_standard_enabled();
     }
 
     /**
