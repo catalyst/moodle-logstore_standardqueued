@@ -30,7 +30,7 @@ require(__DIR__ . "/../standard/settings.php");
 
 if ($hassiteconfig) {
     if (store::both_logstore_standard_enabled()) {
-        core/notification::warning(get_string('bothconfigured', 'logstore_standardqueued'));
+        core\notification::warning(get_string('bothconfigured', 'logstore_standardqueued'));
     } else {
         $configuredqueue = store::configured_queue();
         if ($configuredqueue) {
