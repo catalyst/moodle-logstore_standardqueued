@@ -103,8 +103,7 @@ class logstore_standardqueued_store_testcase extends advanced_testcase {
      * @throws moodle_exception
      */
     public function test_queued_log_writing_bad_queue() {
-        global $DB;
-        global $CFG;
+        global $DB, $CFG;
         $this->resetAfterTest();
         $this->preventResetByRollback(); // Logging waits till the transaction gets committed.
 
@@ -143,17 +142,10 @@ class logstore_standardqueued_store_testcase extends advanced_testcase {
         $this->setUser(0);
         $event1 = \logstore_standard\event\unittest_executed::create(
             array('context' => context_module::instance($module1->cmid), 'other' => array('sample' => 5, 'xx' => 10)));
-        // Capture error log.
-        $this->oldlog = ini_get('error_log');
-        $tmplog = "$CFG->dataroot/test_queued_log_writing_bad_queue.log";
-        ini_set('error_log', $tmplog);
+
         $event1->trigger();
-        ini_set('error_log', $this->oldlog);
-        $msg = trim(file_get_contents($tmplog));
-        unlink($tmplog);
-        $this->assertStringEndsWith(
-            "logstore_standardqueued: Failed to push event to the queue: ".$store->exception_message(), $msg
-        );
+
+        $this->assertDebuggingCalled("logstore_standardqueued: Failed to push event to the queue: ".$store->exception_message());
 
         $logs = $DB->get_records('logstore_standard_log', array(), 'id ASC');
         $this->assertCount(1, $logs);
