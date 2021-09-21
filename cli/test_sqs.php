@@ -56,7 +56,9 @@ if (!$q->is_configured()) {
     die ("logstore_standardqueued sqs not configured: ".$q->configerror);
 }
 
+$now = microtime(true);
 $q->push_entry($test_event);
+echo "Push: ".(microtime(true) - $now)."\n";
 sleep(2);
 $entries = $q->pull_entries();
 

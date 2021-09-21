@@ -41,6 +41,15 @@ class store extends tested_store {
 
         $this->queue = self::$bad ? (new test_queue_bad()) : (new test_queue_good());
     }
+
+    /**
+     * Bad queue exception message.
+     *
+     * @return string $message exception message
+     */
+    public function exception_message() {
+        return test_queue_bad::$message;
+    }
 }
 
 class test_queue_good implements queue_interface {
@@ -88,6 +97,9 @@ class test_queue_good implements queue_interface {
 }
 
 class test_queue_bad implements queue_interface {
+    /** @var string $events */
+    public static $message = "I'm bad";
+
     /**
      * A line describing the queue and its config.
      *
@@ -103,7 +115,7 @@ class test_queue_bad implements queue_interface {
      * @param array $evententry raw event data
      */
     public function push_entry(array $evententry) {
-        throw new Exception("I'm bad");
+        throw new Exception(self::$message);
     }
 
     /**
