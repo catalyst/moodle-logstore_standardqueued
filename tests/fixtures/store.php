@@ -32,10 +32,23 @@ use logstore_standardqueued\log\store as tested_store;
 
 defined('MOODLE_INTERNAL') || die();
 
+/**
+ * Test store.
+ *
+ * @package    logstore_standardqueued
+ * @author     Srdjan Janković
+ * @copyright  Catalyst IT
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class store extends tested_store {
     /** @var bool */
     public static $bad = false;
 
+    /**
+     * Constructor.
+     *
+     * @param \tool_log\log\manager $manager Log manages.
+     */
     public function __construct(\tool_log\log\manager $manager) {
         parent::__construct($manager);
 
@@ -52,6 +65,14 @@ class store extends tested_store {
     }
 }
 
+/**
+ * Test queue.
+ *
+ * @package    logstore_standardqueued
+ * @author     Srdjan Janković
+ * @copyright  Catalyst IT
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class test_queue_good implements queue_interface {
     /** @var array $events */
     private static $events = [];
@@ -96,6 +117,14 @@ class test_queue_good implements queue_interface {
     }
 }
 
+/**
+ * Test queue.
+ *
+ * @package    logstore_standardqueued
+ * @author     Srdjan Janković
+ * @copyright  Catalyst IT
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class test_queue_bad implements queue_interface {
     /** @var string $events */
     public static $message = "I'm bad";

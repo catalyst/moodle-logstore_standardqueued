@@ -32,6 +32,14 @@ use Aws\Sqs\SqsClient, Aws\Exception\AwsException;
 
 use Exception, JsonException;
 
+/**
+ * Standard log queue
+ *
+ * @package    logstore_standardqueued
+ * @author     Srdjan Janković
+ * @copyright  Catalyst IT
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class sqs implements queue_interface {
     /** @var array $deps list of dependancies */
     public static $deps = ['aws'];
@@ -45,6 +53,9 @@ class sqs implements queue_interface {
     /** @var SqsClient $client AWS SQS api client */
     protected $client;
 
+    /**
+     * Constructor.
+     */
     public function __construct() {
         global $CFG;
 
