@@ -26,7 +26,7 @@ use logstore_standardqueued\log\store;
 
 defined('MOODLE_INTERNAL') || die();
 
-require __DIR__ . "/../standard/settings.php";
+require_once(__DIR__ . "/../standard/settings.php");
 
 if ($hassiteconfig) {
     if (store::both_logstore_standard_enabled()) {
