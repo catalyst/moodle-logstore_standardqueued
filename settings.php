@@ -24,6 +24,8 @@
 
 use logstore_standardqueued\log\store;
 
+defined('MOODLE_INTERNAL') || die();
+
 require __DIR__ . "/../standard/settings.php";
 
 if ($hassiteconfig) {

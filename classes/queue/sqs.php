@@ -156,7 +156,7 @@ class sqs implements queue_interface {
      * @param int $num max number of events to pull
      */
     public function pull_entries($num=null) {
-        $awsmax = 10;  # Max messages that AWS is willing to return in one go.
+        $awsmax = 10;  // Max messages that AWS is willing to return in one go.
         $max = $num && $num < $awsmax ? $num : $awsmax;
 
         $pulled = [];
@@ -183,7 +183,7 @@ class sqs implements queue_interface {
                         'ReceiptHandle' => $rh,
                     ]);
                 } catch (AwsException $e) {
-                    error_log(
+                    debugging(
                         "logstore_standardqueued: Failed to delete message: $body\n".
                         $e->getAwsErrorMessage()
                     );
@@ -192,7 +192,7 @@ class sqs implements queue_interface {
 
                 $md5real = md5($body);
                 if ($md5real != $md5) {
-                    error_log(
+                    debugging(
                         "logstore_standardqueued: Message MD5 mismatch: $body\nExpected $md5, got $md5real"
                     );
                     continue;
@@ -201,7 +201,7 @@ class sqs implements queue_interface {
                 try {
                     $pulled[] = json_decode($body,  JSON_THROW_ON_ERROR);
                 } catch (JsonException $e) {
-                    error_log(
+                    debugging(
                         "logstore_standardqueued: Message decode error: $body\n".
                         $e->getMessage()
                     );

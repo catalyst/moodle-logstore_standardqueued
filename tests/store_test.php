@@ -28,6 +28,14 @@ defined('MOODLE_INTERNAL') || die();
 require_once(__DIR__ . '/../../standard/tests/fixtures/event.php');
 require_once(__DIR__ . '/fixtures/store.php');
 
+/**
+ * Standard log store tests.
+ *
+ * @package    logstore_standardqueued
+ * @author     Srdjan Janković
+ * @copyright  Catalyst IT
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class logstore_standardqueued_store_testcase extends advanced_testcase {
     /** @var string Original error log */
     protected $oldlog;

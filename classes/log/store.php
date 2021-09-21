@@ -120,7 +120,7 @@ class store extends base_store {
                 try {
                     $this->queue->push_entry($entry);
                 } catch (Exception $e) {
-                    error_log(
+                    debugging(
                         "logstore_standardqueued: Failed to push event to the queue: ".
                         $e->getMessage()
                     );
