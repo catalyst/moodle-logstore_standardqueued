@@ -60,8 +60,25 @@ $q->push_entry($test_event);
 sleep(2);
 $entries = $q->pull_entries();
 
-if (count($entries) == 1 && $entry[0] ==  $test_event) {
-    echo "OK\n";
-} else {
+if (count($entries) != 1) {
     var_dump($entries);
+} else {
+    $ok = true;
+    foreach ($test_event as $k => $v) {
+        if (!array_key_exists($k, $entries[0])) {
+            echo "$k: missing\n";
+            $ok = false;
+            var_dump($entries[0]);
+            break;
+        }
+
+        $ev = $entries[0][$k];
+        if ($ev != $v) {
+            $ok = false;
+            echo "$k: expected $v, got $ev\n";
+        }
+    }
+    if ($ok) {
+        echo "OK\n";
+    }
 }

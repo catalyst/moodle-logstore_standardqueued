@@ -172,19 +172,28 @@ class sqs implements queue_interface {
                         'ReceiptHandle' => $rh,
                     ]);
                 } catch (AwsException $e) {
-                    // log
+                    error_log(
+                        "logstore_standardqueued: Failed to delete message: $body\n".
+                        $e->getAwsErrorMessage()
+                    );
                     continue;
                 }
 
-                if (md5($body) != $md5) {
-                    // log
+                $md5real = md5($body);
+                if ($md5real != $md5) {
+                    error_log(
+                        "logstore_standardqueued: Message MD5 mismatch: $body\nExpected $md5, got $md5real"
+                    );
                     continue;
                 }
 
                 try {
                     $pulled[] = json_decode($body,  JSON_THROW_ON_ERROR);
                 } catch (JsonException $e) {
-                    // log
+                    error_log(
+                        "logstore_standardqueued: Message decode error: $body\n".
+                        $e->getMessage()
+                    );
                     // Nothing we can do about it at this stage.
                     continue;
                 }
