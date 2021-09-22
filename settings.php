@@ -26,29 +26,43 @@ use logstore_standardqueued\log\store;
 
 defined('MOODLE_INTERNAL') || die();
 
-require(__DIR__ . "/../standard/settings.php");
-
 if ($hassiteconfig) {
+    $warntext = '';
+
     if (store::both_logstore_standard_enabled()) {
-        core\notification::warning(get_string('bothconfigured', 'logstore_standardqueued'));
+        $warntext  = $OUTPUT->notification(
+            get_string('bothconfigured', 'logstore_standardqueued'),
+            core\output\notification::NOTIFY_WARNING
+        );
     } else {
         $configuredqueue = store::configured_queue();
         if ($configuredqueue) {
-            core\notification::success(get_string('queue', 'logstore_standardqueued', $configuredqueue->details()));
+            $warntext = $OUTPUT->notification(
+                get_string('queue', 'logstore_standardqueued', $configuredqueue->details()),
+                core\output\notification::NOTIFY_SUCCESS
+            );
 
             foreach ($configuredqueue::$deps as $dep) {
                 switch ($dep) {
                     case 'aws':
                         if (!file_exists($CFG->dirroot . '/local/aws/classes/admin_settings_aws_region.php')) {
-                            core\notification::error(get_string('awssdkrequired', 'logstore_standardqueued'));
+                            $warntext .= $OUTPUT->notification(
+                                get_string('awssdkrequired', 'logstore_standardqueued'),
+                                core\output\notification::NOTIFY_ERROR
+                            );
                         }
                         break;
                 }
             }
         } else {
-            core\notification::warning(
-                get_string('notconfigured', 'logstore_standardqueued', implode("; ", store::$configerrors))
+            $warntext = $OUTPUT->notification(
+                get_string('notconfigured', 'logstore_standardqueued', implode("; ", store::$configerrors)),
+                core\output\notification::NOTIFY_WARNING
             );
         }
     }
+
+    $settings->add(new admin_setting_heading('logstore_standardqueued/generalsettings', '', $warntext));
 }
+
+require(__DIR__ . "/../standard/settings.php");
