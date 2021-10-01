@@ -57,7 +57,7 @@ class store extends base_store {
     protected $queue;
 
     /**
-     * Push the events to the queue.
+     * Find first configured queue
      */
     public static function configured_queue() {
         self::$configerrors = [];

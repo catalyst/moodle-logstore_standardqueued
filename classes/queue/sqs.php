@@ -59,42 +59,39 @@ class sqs implements queue_interface {
     public function __construct() {
         global $CFG;
 
-        if (isset($CFG->logstore_standardqueued['sqs'])) {
-            $config = $CFG->logstore_standardqueued['sqs'];
+        if (!isset($CFG->logstore_standardqueued['sqs'])) {
+            return;
+        }
 
-            try {
-                $this->queueurl = $config['queue_url'];
+        $config = $CFG->logstore_standardqueued['sqs'];
 
-                // Setup client params and instantiate client.
-                $params = [
-                    'version' => 'latest',
-                    'http' => ['proxy' => \local_aws\local\aws_helper::get_proxy_string()],
-                ];
-                if (isset($config['aws_region'])) {
-                    $params['region'] = $config['aws_region'];
-                }
-                if (isset($config['aws_key'])) {
-                    $params['credentials'] = [
-                        'key' => $config['aws_key'],
-                        'secret' => $config['aws_secret']
-                    ];
-                }
+        if (!isset($config['queue_url'])) {
+            $this->configerror = "No queue_url in config";
+            return;
+        }
 
-                $client = new SqsClient($params);
-
-                // Test the queue.
-                $client->receiveMessage([
-                    'QueueUrl' => $this->queueurl,
-                    'MaxNumberOfMessages' => 1,
-                    'VisibilityTimeout' => 0,
-                ]);
-
-                $this->client = $client;
-            } catch (AwsException $e) {
-                $this->configerror = $e->getAwsErrorMessage();
-            } catch (Exception $e) {
-                $this->configerror = $e->getMessage();
+        $this->queueurl = $config['queue_url'];
+        try {
+            // Setup client params and instantiate client.
+            $params = [
+                'version' => 'latest',
+                'http' => ['proxy' => \local_aws\local\aws_helper::get_proxy_string()],
+            ];
+            if (isset($config['aws_region'])) {
+                $params['region'] = $config['aws_region'];
             }
+            if (isset($config['aws_key'])) {
+                $params['credentials'] = [
+                    'key' => $config['aws_key'],
+                    'secret' => $config['aws_secret']
+                ];
+            }
+
+            $this->client = new SqsClient($params);
+        } catch (AwsException $e) {
+            $this->configerror = $e->getAwsErrorMessage();
+        } catch (Exception $e) {
+            $this->configerror = $e->getMessage();
         }
     }
 
@@ -218,11 +215,32 @@ class sqs implements queue_interface {
     }
 
     /**
-     * Can we use this queue?
+     * Did we configure this queue?
      *
      * @return bool
      */
     public function is_configured() {
         return $this->client;
+    }
+
+    /**
+     * Can we use this queue?
+     *
+     * @return bool
+     */
+    public function is_operational() {
+        try {
+            // Test the queue.
+            $this->client->receiveMessage([
+                'QueueUrl' => $this->queueurl,
+                'MaxNumberOfMessages' => 1,
+                'VisibilityTimeout' => 0,
+            ]);
+            return true;
+        } catch (AwsException $e) {
+            $this->configerror = $e->getAwsErrorMessage();
+        } catch (Exception $e) {
+            $this->configerror = $e->getMessage();
+        }
     }
 }

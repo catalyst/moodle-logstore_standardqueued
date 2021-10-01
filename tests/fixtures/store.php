@@ -109,11 +109,20 @@ class test_queue_good implements queue_interface {
     }
 
     /**
-     * Can we use this queue?
+     * Did we configure this queue?
      *
      * @return bool
      */
     public function is_configured() {
+        return true;
+    }
+
+    /**
+     * Can we use this queue?
+     *
+     * @return bool
+     */
+    public function is_operational() {
         return true;
     }
 }
@@ -158,11 +167,20 @@ class test_queue_bad implements queue_interface {
     }
 
     /**
-     * Can we use this queue?
+     * Did we configure this queue?
      *
      * @return bool
      */
     public function is_configured() {
+        return true;
+    }
+
+    /**
+     * Can we use this queue?
+     *
+     * @return bool
+     */
+    public function is_operational() {
         return true;
     }
 }

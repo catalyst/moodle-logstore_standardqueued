@@ -50,9 +50,16 @@ interface queue_interface {
     public function pull_entries($num=null);
 
     /**
-     * Can we use this queue?
+     * Did we configure this queue?
      *
      * @return bool
      */
     public function is_configured();
+
+    /**
+     * Can we use this queue?
+     *
+     * @return bool
+     */
+    public function is_operational();
 }
