@@ -10,9 +10,9 @@ standard log so it behaves exactly as it normally does.
 
 A minimum of PHP 7.3 is required to run this plugin.
 
-| Moodle Version    |  Branch      |
-|-------------------|--------------|
-| Moodle 3.9++      | main         |
+| Moodle Version    |  Branch          |
+|-------------------|------------------|
+| Moodle 3.9++      | MOODLE_39_STABLE |
 
 
 ## What is great about the standard log store?
