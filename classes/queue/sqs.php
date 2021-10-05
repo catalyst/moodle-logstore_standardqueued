@@ -170,7 +170,6 @@ class sqs implements queue_interface {
 
             foreach ($msgs as $msg) {
                 $body = $msg['Body'];
-                $md5 = $msg['MD5OfBody'];
                 $id = $msg['MessageId'];
                 $rh = $msg['ReceiptHandle'];
 
@@ -183,14 +182,6 @@ class sqs implements queue_interface {
                     debugging(
                         "logstore_standardqueued: Failed to delete message: $body\n".
                         $e->getAwsErrorMessage()
-                    );
-                    continue;
-                }
-
-                $md5real = md5($body);
-                if ($md5real != $md5) {
-                    debugging(
-                        "logstore_standardqueued: Message MD5 mismatch: $body\nExpected $md5, got $md5real"
                     );
                     continue;
                 }
@@ -220,7 +211,7 @@ class sqs implements queue_interface {
      * @return bool
      */
     public function is_configured() {
-        return $this->client;
+        return isset($this->client);
     }
 
     /**
