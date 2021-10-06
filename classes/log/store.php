@@ -93,7 +93,7 @@ class store extends base_store {
         parent::__construct($manager);
 
         $this->component = self::$replacing;
-        $this->buffersize = $this->get_config('buffersize', 50);
+        $this->buffersize = $this->get_config('buffersize', 0);
         $this->queue = self::configured_queue();
     }
 
@@ -128,6 +128,7 @@ class store extends base_store {
                 }
             }
         } else {
+            debugging("No queue: ".implode("\n", self::$configerrors));
             $errorentries = $evententries;
         }
 
