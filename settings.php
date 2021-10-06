@@ -54,13 +54,6 @@ if ($hassiteconfig) {
                         break;
                 }
             }
-
-            if (!$configuredqueue->is_operational()) {
-                $warntext .= $OUTPUT->notification(
-                    get_string('notconfigured', 'logstore_standardqueued', $configuredqueue->configerror),
-                    core\output\notification::NOTIFY_ERROR
-                );
-            }
         } else {
             $warntext = $OUTPUT->notification(
                 get_string('notconfigured', 'logstore_standardqueued', implode("; ", store::$configerrors)),

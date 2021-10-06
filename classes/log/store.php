@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Standard log reader/writer.
+ * Standard log queued reader/writer.
  *
  * @package    logstore_standardqueued
  * @author     Srdjan Janković
