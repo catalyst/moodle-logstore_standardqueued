@@ -41,7 +41,7 @@ use logstore_standardqueued\log\store;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class queue extends check {
-   /**
+    /**
      * Return check result
      * @return result
      */
