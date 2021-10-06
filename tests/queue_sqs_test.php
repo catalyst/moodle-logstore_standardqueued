@@ -26,6 +26,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 use logstore_standardqueued\queue\sqs;
+use Aws\Sqs\SqsClient;
 
 /**
  * Standard log store tests.
@@ -42,7 +43,7 @@ class logstore_standardqueued_queue_sqs_testcase extends advanced_testcase {
      */
     public function create_queue() {
         $queueurl = 'url';
-        $client = $this->getMockBuilder(Aws\Sqs\SqsClient::class)
+        $client = $this->getMockBuilder(SqsClient::class)
             ->setMethods(['sendMessage', 'receiveMessage', 'deleteMessage'])
             ->disableOriginalConstructor()
             ->getMock();
@@ -165,6 +166,9 @@ class t_sqs extends sqs {
 
     /**
      * Constructor.
+     *
+     * @param string $queueurl
+     * @param SqsClient $client mock SQS client
      */
     public function __construct($queueurl, $client) {
         $this->queueurl = $queueurl;
