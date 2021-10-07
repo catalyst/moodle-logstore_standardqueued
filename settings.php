@@ -23,6 +23,7 @@
  */
 
 use logstore_standardqueued\log\store;
+use logstore_standardqueued\check\queue;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -37,8 +38,9 @@ if ($hassiteconfig) {
     } else {
         $configuredqueue = store::configured_queue();
         if ($configuredqueue) {
+            $url = new moodle_url(queue::$detailspath);
             $warntext = $OUTPUT->notification(
-                get_string('queue', 'logstore_standardqueued', $configuredqueue->details()),
+                get_string('queue', 'logstore_standardqueued', $configuredqueue->details())." ".html_writer::link($url, "Details"),
                 core\output\notification::NOTIFY_SUCCESS
             );
 

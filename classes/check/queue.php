@@ -44,6 +44,9 @@ use logstore_standardqueued\log\store;
  */
 class queue extends check {
     /** @var bool $is_operational whether the configured queue is operational */
+    public static $detailspath = "/report/status/index.php?detail=logstore_standardqueued_queue";
+
+    /** @var bool $is_operational whether the configured queue is operational */
     private static $isoperational = false;
 
     /** @var string $queuedetails configured queue details */
@@ -72,7 +75,7 @@ class queue extends check {
      */
     public function get_action_link(): ?action_link {
         if (!self::$isoperational) {
-            $url = new moodle_url("/report/status/index.php?detail=logstore_standardqueued_queue");
+            $url = new moodle_url(self::$detailspath);
             return new action_link($url, get_string('configerror', 'logstore_standardqueued'));
         }
         return null;
