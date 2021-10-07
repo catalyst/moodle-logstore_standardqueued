@@ -30,6 +30,8 @@ defined('MOODLE_INTERNAL') || die();
 
 use core\check\check,
     core\check\result;
+use action_link;
+use moodle_url;
 use logstore_standardqueued\log\store;
 
 /**
@@ -41,27 +43,55 @@ use logstore_standardqueued\log\store;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class queue extends check {
+    /** @var bool $is_operational whether the configured queue is operational */
+    private static $isoperational = false;
+
+    /** @var string $queuedetails configured queue details */
+    private static $queuedetails;
+
+    /** @var string $configerror */
+    private static $configerror;
+
+    function __construct() {
+        if ($configuredqueue = store::configured_queue()) {
+            self::$queuedetails = $configuredqueue->details();
+            if (self::$isoperational = $configuredqueue->is_operational()) {
+                self::$configerror = null;
+            } else {
+                self::$configerror = $configuredqueue->configerror;
+            }
+        } else {
+            self::$isoperational = false;
+            self::$configerror = implode("; ", store::$configerrors);
+        }
+    }
+
+    /**
+     * Return action link
+     * @return action_link
+     */
+    public function get_action_link(): ?action_link {
+        if (!self::$isoperational) {
+            $url = new moodle_url("/report/status/index.php?detail=logstore_standardqueued_queue");
+            return new action_link($url, get_string('configerror', 'logstore_standardqueued'));
+        }
+        return null;
+    }
+
     /**
      * Return check result
      * @return result
      */
     public function get_result(): result {
-        $configuredqueue = store::configured_queue();
-        $details = null;
-        if ($configuredqueue) {
-            if ($configuredqueue->is_operational()) {
-                $status = result::OK;
-                $summary = get_string('queue', 'logstore_standardqueued');
-                $details = $configuredqueue->details();
-            } else {
-                $status = result::ERROR;
-                $summary = get_string('notconfigured', 'logstore_standardqueued');
-                $details = $configuredqueue->configerror;
-            }
+        if (self::$isoperational) {
+            $status = result::OK;
+            $summary = get_string('queue', 'logstore_standardqueued', self::$queuedetails);
+            $details = self::$queuedetails;
         } else {
             $status = result::ERROR;
             $summary = get_string('notconfigured', 'logstore_standardqueued');
-            $details = implode("; ", store::$configerrors);
+            $details = self::$queuedetails ? (self::$queuedetails."\n") : "";
+            $details .= $configuredqueue->configerror;
         }
 
         return new result($status, $summary, $details);
