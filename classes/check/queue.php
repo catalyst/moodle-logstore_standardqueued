@@ -55,6 +55,9 @@ class queue extends check {
     /** @var string $configerror */
     private static $configerror;
 
+    /**
+     * Constructor
+     */
     function __construct() {
         if ($configuredqueue = store::configured_queue()) {
             self::$queuedetails = $configuredqueue->details();
