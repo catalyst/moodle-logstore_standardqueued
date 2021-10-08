@@ -58,7 +58,7 @@ class queue extends check {
     /**
      * Constructor
      */
-    function __construct() {
+    public function __construct() {
         if ($configuredqueue = store::configured_queue()) {
             self::$queuedetails = $configuredqueue->details();
             if (self::$isoperational = $configuredqueue->is_operational()) {
