@@ -160,7 +160,6 @@ class t_sqs extends sqs {
     /** @var string $queueurl AWS SQS queue url */
     public $queueurl;
 
-
     /** @var SqsClient $client AWS SQS api client */
     public $client;
 
@@ -173,5 +172,15 @@ class t_sqs extends sqs {
     public function __construct($queueurl, $client) {
         $this->queueurl = $queueurl;
         $this->client = $client;
+    }
+
+    /**
+     * Create AWS SQS client
+     *
+     * @param bool $proxy should we use proxy feature if available
+     * @return SqsClient
+     */
+    protected function client($proxy=false) {
+        return $this->client;
     }
 }
