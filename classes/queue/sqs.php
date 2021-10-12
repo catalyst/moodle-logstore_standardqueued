@@ -50,8 +50,8 @@ class sqs implements queue_interface {
     /** @var string $queueurl AWS SQS queue url */
     protected $queueurl;
 
-    /** @var SqsClient $client AWS SQS api client */
-    protected $client;
+    /** @var array $config SQS config */
+    protected $config;
 
     /**
      * Constructor.
@@ -63,31 +63,57 @@ class sqs implements queue_interface {
             return;
         }
 
-        $config = $CFG->logstore_standardqueued['sqs'];
+        $this->config = $CFG->logstore_standardqueued['sqs'];
 
-        if (!isset($config['queue_url'])) {
+        if (!isset($this->config['queue_url'])) {
             $this->configerror = "No queue_url in config";
             return;
         }
 
-        $this->queueurl = $config['queue_url'];
-        try {
-            // Setup client params and instantiate client.
-            $params = [
-                'version' => 'latest',
-                'http' => ['proxy' => \local_aws\local\aws_helper::get_proxy_string()],
-            ];
-            if (isset($config['aws_region'])) {
-                $params['region'] = $config['aws_region'];
-            }
-            if (isset($config['aws_key'])) {
-                $params['credentials'] = [
-                    'key' => $config['aws_key'],
-                    'secret' => $config['aws_secret']
-                ];
-            }
+        $this->queueurl = $this->config['queue_url'];
+    }
 
-            $this->client = new SqsClient($params);
+    /**
+     * Create AWS SQS client
+     *
+     * @param bool $proxy should we use proxy feature if available
+     * @return SqsClient
+     * @throws AwsException
+     */
+    protected function client($proxy=false) {
+        // Setup client params and instantiate client.
+        $params = [
+            'version' => 'latest',
+            'http' => ['proxy' => \local_aws\local\aws_helper::get_proxy_string()],
+        ];
+        if (isset($this->config['aws_region'])) {
+            $params['region'] = $this->config['aws_region'];
+        }
+        if (isset($this->config['aws_key'])) {
+            $params['credentials'] = [
+                'key' => $this->config['aws_key'],
+                'secret' => $this->config['aws_secret']
+            ];
+        }
+        if (isset($this->config['aws_proxy_endpoint'])) {
+            $params['endpoint'] = $this->config['aws_proxy_endpoint'];
+            if (!$proxy) {
+                $params['endpoint'] .= '/passthrough/';
+            }
+        }
+
+        return new SqsClient($params);
+    }
+
+    /**
+     * Create AWS SQS client absorbing the exceptions
+     *
+     * @param bool $proxy should we use proxy feature if available
+     * @return SqsClient|null
+     */
+    protected function safe_client($proxy=false) {
+        try {
+            return $this->client($proxy);
         } catch (AwsException $e) {
             $this->configerror = $e->getAwsErrorMessage();
         } catch (Exception $e) {
@@ -110,7 +136,7 @@ class sqs implements queue_interface {
      * @param array $evententry raw event data
      */
     public function push_entry(array $evententry) {
-        $this->client->sendMessage([
+        $this->client(true)->sendMessage([
             'QueueUrl' => $this->queueurl,
             'MessageBody' => json_encode(
                 $evententry,
@@ -136,13 +162,13 @@ class sqs implements queue_interface {
             ];
         }
 
-        $res = $this->client->sendMessageBatch([
+        $res = $this->client(true)->sendMessageBatch([
             'QueueUrl' => $this->queueurl,
             'Entries' => $entries,
         ]);
 
         if ($res['Failed']) {
-            var_dump($res['Failed']);
+            // var_dump($res['Failed']);
             throw new Exception("Failed");
         }
     }
@@ -156,9 +182,10 @@ class sqs implements queue_interface {
         $awsmax = 10;  // Max messages that AWS is willing to return in one go.
         $max = $num && $num < $awsmax ? $num : $awsmax;
 
+        $client = $this->client();
         $pulled = [];
         while (true) {
-            $res = $this->client->receiveMessage([
+            $res = $client->receiveMessage([
                 'QueueUrl' => $this->queueurl,
                 'MaxNumberOfMessages' => $max,
             ]);
@@ -174,7 +201,7 @@ class sqs implements queue_interface {
                 $rh = $msg['ReceiptHandle'];
 
                 try {
-                    $this->client->deleteMessage([
+                    $client->deleteMessage([
                         'QueueUrl' => $this->queueurl,
                         'ReceiptHandle' => $rh,
                     ]);
@@ -211,7 +238,7 @@ class sqs implements queue_interface {
      * @return bool
      */
     public function is_configured() {
-        return isset($this->client);
+        return ($this->safe_client() !== null);
     }
 
     /**
@@ -220,18 +247,14 @@ class sqs implements queue_interface {
      * @return bool
      */
     public function is_operational() {
-        try {
+        if ($client = $this->safe_client()) {
             // Test the queue.
-            $this->client->receiveMessage([
+            $client->receiveMessage([
                 'QueueUrl' => $this->queueurl,
                 'MaxNumberOfMessages' => 1,
                 'VisibilityTimeout' => 0,
             ]);
             return true;
-        } catch (AwsException $e) {
-            $this->configerror = $e->getAwsErrorMessage();
-        } catch (Exception $e) {
-            $this->configerror = $e->getMessage();
         }
     }
 }
