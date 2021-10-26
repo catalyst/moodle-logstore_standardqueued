@@ -28,7 +28,6 @@ namespace logstore_standardqueued\log;
 defined('MOODLE_INTERNAL') || die();
 
 use Exception;
-use moodle_exception;
 
 use tool_log\log\manager;
 use logstore_standardqueued\queue\queue_interface;

@@ -62,12 +62,8 @@ $CFG->logstore_standardqueued = [
 ```php
 $CFG->logstore_standardqueued = [
     'sqs' => [
-        'aws_region' => '<region>',
         'queue_url' => 'https://sqs.ap-southeast-2.amazonaws.com/XXXX/some-queue',
-        'aws_key' => '<key>',
-        'aws_secret' => '<secret>',
+        'proxy_url' => 'https://my.proxy.service',
     ]
 ];
 ```
-
-`aws_key` and `aws_secret` are preferrably set in the env.

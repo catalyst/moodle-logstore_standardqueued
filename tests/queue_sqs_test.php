@@ -26,7 +26,6 @@
 defined('MOODLE_INTERNAL') || die();
 
 use logstore_standardqueued\queue\sqs;
-use Aws\Sqs\SqsClient;
 
 /**
  * Standard log store tests.
@@ -41,10 +40,10 @@ class logstore_standardqueued_queue_sqs_testcase extends advanced_testcase {
      * Create sqs que for test
      *
      */
-    public function create_queue() {
+    private function create_queue() {
         $queueurl = 'url';
-        $client = $this->getMockBuilder(SqsClient::class)
-            ->setMethods(['sendMessage', 'receiveMessage', 'deleteMessage'])
+        $client = $this->getMockBuilder(curl::class)
+            ->setMethods(['post'])
             ->disableOriginalConstructor()
             ->getMock();
 
@@ -53,6 +52,45 @@ class logstore_standardqueued_queue_sqs_testcase extends advanced_testcase {
         $this->assertTrue($sqs->is_configured());
 
         return $sqs;
+    }
+
+    /**
+     * JSON encode helper
+     *
+     * @param array $data to encode
+     * @return string
+     */
+    private function json_encode(array $data) {
+        return json_encode(
+            $data,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+        );
+    }
+
+    /**
+     * JSON decode helper
+     *
+     * @param string $json encoded
+     * @return array
+     */
+    private function json_decode($json) {
+        return json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * curl options helper
+     *
+     * @param int $timeout
+     * @return array
+     */
+    private function curl_options($timeout) {
+        return [
+            'CURLOPT_CONNECTTIMEOUT' => $timeout,
+            'CURLOPT_HTTPHEADER' => [
+                'Accept: application/json',
+                'Content-Type: application/json',
+            ],
+        ];
     }
 
     /**
@@ -66,14 +104,23 @@ class logstore_standardqueued_queue_sqs_testcase extends advanced_testcase {
 
         $evententry = ['a' => "b"];
         $sqs->client->expects($this->once())
-            ->method('sendMessage')
-            ->with($this->equalTo([
-                'QueueUrl' => $sqs->queueurl,
-                'MessageBody' => json_encode(
-                    $evententry,
-                    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
-                ),
-            ]));
+            ->method('post')
+            ->with(
+                $this->equalTo($sqs->schedule_action_url('SendMessage')),
+                $this->callback(function($json) use ($sqs, $evententry) {
+                    $this->assertEquals([
+                        'QueueUrl' => $sqs->queueurl,
+                        'MessageBody' => $this->json_encode($evententry)
+                    ], $this->json_decode($json));
+                    return true;
+                }),
+                $this->equalTo($this->curl_options(1))
+            )
+            ->willReturnCallback(function($endpoint, $json, $options) use ($sqs) {
+                $sqs->client->info = [
+                    'http_code' => 204,
+                ];
+            });
         $sqs->push_entry($evententry);
     }
 
@@ -86,38 +133,80 @@ class logstore_standardqueued_queue_sqs_testcase extends advanced_testcase {
 
         $sqs = $this->create_queue();
 
-        $messageid = 'Id';
         $messagereceipthandle = 'ReceiptHandle';
         $evententry = ['a' => "b"];
-        $sqs->client->expects($this->exactly(2))
-            ->method('receiveMessage')
-            ->with($this->equalTo([
-                'QueueUrl' => $sqs->queueurl,
-                'MaxNumberOfMessages' => 10,
-            ]))
-            ->willReturnOnConsecutiveCalls(
+        $curloptions = $this->curl_options(3);
+        $sqs->client->expects($this->exactly(3))
+            ->method('post')
+            ->withConsecutive(
                 [
-                    'Messages' => [
-                        [
-                            'MessageId' => $messageid,
+                    $this->equalTo($sqs->request_action_url('ReceiveMessage')),
+                    $this->callback(function($json) use ($sqs, $evententry) {
+                        $this->assertEquals([
+                            'QueueUrl' => $sqs->queueurl,
+                            'MaxNumberOfMessages' => 10,
+                        ], $this->json_decode($json));
+                        return true;
+                    }),
+                    $this->equalTo($curloptions)
+                ],
+                [
+                    $this->equalTo($sqs->request_action_url('DeleteMessage')),
+                    $this->callback(function($json) use ($sqs, $messagereceipthandle, $evententry) {
+                        $this->assertEquals([
+                            'QueueUrl' => $sqs->queueurl,
                             'ReceiptHandle' => $messagereceipthandle,
-                            'Body' => json_encode(
-                                $evententry,
-                                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
-                            ),
-                        ],
-                    ]
+                        ], $this->json_decode($json));
+                        return true;
+                    }),
+                    $this->equalTo($curloptions)
                 ],
                 [
-                    'Messages' => []
+                    $this->equalTo($sqs->request_action_url('ReceiveMessage')),
+                    $this->callback(function($json) use ($sqs, $evententry) {
+                        $this->assertEquals([
+                            'QueueUrl' => $sqs->queueurl,
+                            'MaxNumberOfMessages' => 10,
+                        ], $this->json_decode($json));
+                        return true;
+                    }),
+                    $this->equalTo($curloptions)
                 ],
-            );
-        $sqs->client->expects($this->once())
-            ->method('deleteMessage')
-            ->with($this->equalTo([
-                'QueueUrl' => $sqs->queueurl,
-                'ReceiptHandle' => $messagereceipthandle,
-            ]));
+            )
+            ->willReturnCallback(function($endpoint, $json, $options) use ($sqs, $messagereceipthandle, $evententry) {
+                if (strpos($endpoint, 'ReceiveMessage') !== false) {
+                    static $first = true;
+
+                    $sqs->client->info = [
+                        'http_code' => 200,
+                    ];
+
+                    if ($first) {
+                        $first = false;
+                        $messageid = 'Id';
+                        return $this->json_encode([
+                            'Messages' => [
+                                [
+                                    'MessageId' => $messageid,
+                                    'ReceiptHandle' => $messagereceipthandle,
+                                    'Body' => $this->json_encode($evententry)
+                                ],
+                            ]
+                        ]);
+                    }
+
+                    return "{}";
+                }
+
+                if (strpos($endpoint, 'DeleteMessage') !== false) {
+                    $sqs->client->info = [
+                        'http_code' => 204,
+                    ];
+                    return "";
+                }
+
+                throw new Exception("Unexpected call $endpoint");
+            });
         $this->assertSame([$evententry], $sqs->pull_entries());
     }
 
@@ -131,15 +220,27 @@ class logstore_standardqueued_queue_sqs_testcase extends advanced_testcase {
         $sqs = $this->create_queue();
 
         $sqs->client->expects($this->once())
-            ->method('receiveMessage')
-            ->with($this->equalTo([
-                'QueueUrl' => $sqs->queueurl,
-                'MaxNumberOfMessages' => 1,
-                'VisibilityTimeout' => 0,
-            ]))
-            ->willReturn([
-                'Messages' => [],
-            ]);
+            ->method('post')
+            ->with(
+                $this->equalTo($sqs->request_action_url('ReceiveMessage')),
+                $this->callback(function($json) use ($sqs) {
+                    $this->assertEquals([
+                        'QueueUrl' => $sqs->queueurl,
+                        'MaxNumberOfMessages' => 1,
+                        'VisibilityTimeout' => 0,
+                    ], $this->json_decode($json));
+                    return true;
+                }),
+                $this->equalTo($this->curl_options(3))
+            )
+            ->willReturnCallback(function($endpoint, $json, $options) use ($sqs) {
+                $sqs->client->info = [
+                    'http_code' => 200,
+                ];
+                return $this->json_encode([
+                    'Messages' => []
+                ]);
+            });
         $res = $sqs->is_operational();
         if ($sqs->configerror) {
             throw new Exception($sqs->configerror);
@@ -160,14 +261,17 @@ class t_sqs extends sqs {
     /** @var string $queueurl AWS SQS queue url */
     public $queueurl;
 
-    /** @var SqsClient $client AWS SQS api client */
+    /** @var string $proxy url */
+    public $proxy = "https//my.aws.proxy/";
+
+    /** @var curl $client curl client */
     public $client;
 
     /**
      * Constructor.
      *
      * @param string $queueurl
-     * @param SqsClient $client mock SQS client
+     * @param curl $client mock curl client
      */
     public function __construct($queueurl, $client) {
         $this->queueurl = $queueurl;
@@ -175,12 +279,31 @@ class t_sqs extends sqs {
     }
 
     /**
-     * Create AWS SQS client
+     * Return new curl client
      *
-     * @param bool $proxy should we use proxy feature if available
-     * @return SqsClient
+     * @return curl
      */
-    protected function client($proxy=false) {
+    public function curl() {
         return $this->client;
+    }
+
+    /**
+     * Request action url test helper
+     *
+     * @param string $action SQS API action
+     * @return string
+     */
+    public function request_action_url($action) {
+        return $this->proxy."/do/sqs/$action";
+    }
+
+    /**
+     * Schedule action url test helper
+     *
+     * @param string $action SQS API action
+     * @return string
+     */
+    public function schedule_action_url($action) {
+        return $this->proxy."/schedule/sqs/$action";
     }
 }

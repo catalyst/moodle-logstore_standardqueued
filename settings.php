@@ -43,19 +43,6 @@ if ($hassiteconfig) {
                 get_string('queue', 'logstore_standardqueued', $configuredqueue->details())." ".html_writer::link($url, "Details"),
                 core\output\notification::NOTIFY_SUCCESS
             );
-
-            foreach ($configuredqueue::$deps as $dep) {
-                switch ($dep) {
-                    case 'aws':
-                        if (!file_exists($CFG->dirroot . '/local/aws/classes/admin_settings_aws_region.php')) {
-                            $warntext .= $OUTPUT->notification(
-                                get_string('awssdkrequired', 'logstore_standardqueued'),
-                                core\output\notification::NOTIFY_ERROR
-                            );
-                        }
-                        break;
-                }
-            }
         } else {
             $warntext = $OUTPUT->notification(
                 get_string('notconfigured', 'logstore_standardqueued', implode("; ", store::$configerrors)),

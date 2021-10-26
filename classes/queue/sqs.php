@@ -27,10 +27,11 @@ namespace logstore_standardqueued\queue;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->dirroot . '/local/aws/sdk/aws-autoloader.php');
-use Aws\Sqs\SqsClient, Aws\Exception\AwsException;
+require_once($CFG->libdir . '/filelib.php');
 
 use Exception, JsonException;
+use moodle_exception;
+use curl;
 
 /**
  * Standard log queue
@@ -41,17 +42,14 @@ use Exception, JsonException;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class sqs implements queue_interface {
-    /** @var array $deps list of dependancies */
-    public static $deps = ['aws'];
-
     /** @var string $configerror set in case of misconfiguration */
     public $configerror;
 
     /** @var string $queueurl AWS SQS queue url */
     protected $queueurl;
 
-    /** @var array $config SQS config */
-    protected $config;
+    /** @var string $proxy base url of a proxy service that will accept requests */
+    protected $proxy;
 
     /**
      * Constructor.
@@ -69,56 +67,104 @@ class sqs implements queue_interface {
             $this->configerror = "No queue_url in config";
             return;
         }
+        if (!isset($this->config['proxy_url'])) {
+            $this->configerror = "No proxy_url in config";
+            return;
+        }
 
         $this->queueurl = $this->config['queue_url'];
+        $this->proxy = $this->config['proxy_url'];
     }
 
     /**
-     * Create AWS SQS client
+     * Return new curl client
      *
-     * @param bool $proxy should we use proxy feature if available
-     * @return SqsClient
-     * @throws AwsException
+     * @return curl
      */
-    protected function client($proxy=false) {
-        // Setup client params and instantiate client.
-        $params = [
-            'version' => 'latest',
-            'http' => ['proxy' => \local_aws\local\aws_helper::get_proxy_string()],
-        ];
-        if (isset($this->config['aws_region'])) {
-            $params['region'] = $this->config['aws_region'];
-        }
-        if (isset($this->config['aws_key'])) {
-            $params['credentials'] = [
-                'key' => $this->config['aws_key'],
-                'secret' => $this->config['aws_secret']
-            ];
-        }
-        if (isset($this->config['aws_proxy_endpoint'])) {
-            $params['endpoint'] = $this->config['aws_proxy_endpoint'];
-            if (!$proxy) {
-                $params['endpoint'] .= '/passthrough/';
-            }
-        }
-
-        return new SqsClient($params);
+    protected function curl() {
+        return new curl();
     }
 
     /**
-     * Create AWS SQS client absorbing the exceptions
+     * JSON encode helper
      *
-     * @param bool $proxy should we use proxy feature if available
-     * @return SqsClient|null
+     * @param array $data to encode
+     * @return string
      */
-    protected function safe_client($proxy=false) {
+    private function json_encode(array $data) {
+        return json_encode(
+            $data,
+            JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
+        );
+    }
+
+    /**
+     * JSON decode helper
+     *
+     * @param string $json encoded
+     * @return array
+     */
+    private function json_decode($json) {
         try {
-            return $this->client($proxy);
-        } catch (AwsException $e) {
-            $this->configerror = $e->getAwsErrorMessage();
-        } catch (Exception $e) {
-            $this->configerror = $e->getMessage();
+            return json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new JsonException($json, 0, $e);
         }
+    }
+
+    /**
+     * Make a SQS proxy schedule request
+     *
+     * @param string $action SQS API action
+     * @param array $params SQS API action params without queue spec
+     * @throws moodle_exception
+     */
+    protected function schedule($action, array $params) {
+        $this->do_request($action, $params, 'schedule', 1);
+    }
+
+    /**
+     * Make a SQS proxy immediate request
+     *
+     * @param string $action SQS API action
+     * @param array $params SQS API action params without queue spec
+     * @throws moodle_exception
+     */
+    protected function request($action, array $params) {
+        $ret = $this->do_request($action, $params, 'do');
+        return $ret === null ? null : $this->json_decode($ret);
+    }
+
+    /**
+     * Make a SQS proxy request
+     *
+     * @param string $action SQS API action
+     * @param array $params SQS API action params without queue spec
+     * @param string $slug SQS API path slug
+     * @param int $timeout connect timeout, default 3
+     * @return string
+     * @throws moodle_exception
+     */
+    private function do_request($action, array $params, $slug, $timeout = 3) {
+        $params['QueueUrl'] = $this->queueurl;
+
+        $client = $this->curl();
+        $ret = $client->post(
+            $this->proxy."/$slug/sqs/$action",
+            $this->json_encode($params),
+            [
+                'CURLOPT_HTTPHEADER' => [
+                    'Accept: application/json',
+                    'Content-Type: application/json',
+                ],
+                'CURLOPT_CONNECTTIMEOUT' => $timeout,
+            ]
+        );
+        $code = $client->info['http_code'];
+        if ($code >= 300) {
+            throw new moodle_exception("schedule $action: $code $ret");
+        }
+        return $code === 204 ? null : $ret;
     }
 
     /**
@@ -136,12 +182,8 @@ class sqs implements queue_interface {
      * @param array $evententry raw event data
      */
     public function push_entry(array $evententry) {
-        $this->client(true)->sendMessage([
-            'QueueUrl' => $this->queueurl,
-            'MessageBody' => json_encode(
-                $evententry,
-                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
-            ),
+        $this->schedule('SendMessage', [
+            'MessageBody' => $this->json_encode($evententry)
         ]);
     }
 
@@ -155,22 +197,13 @@ class sqs implements queue_interface {
         foreach ($evententries as $id => $entry) {
             $entries[] = [
                 'Id' => $id,
-                'MessageBody' => json_encode(
-                    $entry,
-                    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
-                ),
+                'MessageBody' => $this->json_encode($entry)
             ];
         }
 
-        $res = $this->client(true)->sendMessageBatch([
-            'QueueUrl' => $this->queueurl,
+        $this->schedule('SendMessageBatch', [
             'Entries' => $entries,
         ]);
-
-        if ($res['Failed']) {
-            // var_dump($res['Failed']);
-            throw new Exception("Failed");
-        }
     }
 
     /**
@@ -182,15 +215,13 @@ class sqs implements queue_interface {
         $awsmax = 10;  // Max messages that AWS is willing to return in one go.
         $max = $num && $num < $awsmax ? $num : $awsmax;
 
-        $client = $this->client();
         $pulled = [];
         while (true) {
-            $res = $client->receiveMessage([
-                'QueueUrl' => $this->queueurl,
+            $res = $this->request('ReceiveMessage', [
                 'MaxNumberOfMessages' => $max,
             ]);
 
-            $msgs = $res['Messages'];
+            $msgs = $res['Messages'] ?? null;
             if (!$msgs || count($msgs) == 0) {
                 break;
             }
@@ -201,20 +232,19 @@ class sqs implements queue_interface {
                 $rh = $msg['ReceiptHandle'];
 
                 try {
-                    $client->deleteMessage([
-                        'QueueUrl' => $this->queueurl,
+                    $this->request('DeleteMessage', [
                         'ReceiptHandle' => $rh,
                     ]);
-                } catch (AwsException $e) {
+                } catch (Exception $e) {
                     debugging(
                         "logstore_standardqueued: Failed to delete message: $body\n".
-                        $e->getAwsErrorMessage()
+                        $e->getMessage()
                     );
                     continue;
                 }
 
                 try {
-                    $pulled[] = json_decode($body,  JSON_THROW_ON_ERROR);
+                    $pulled[] = $this->json_decode($body);
                 } catch (JsonException $e) {
                     debugging(
                         "logstore_standardqueued: Message decode error: $body\n".
@@ -238,7 +268,7 @@ class sqs implements queue_interface {
      * @return bool
      */
     public function is_configured() {
-        return ($this->safe_client() !== null);
+        return $this->queueurl !== null;
     }
 
     /**
@@ -247,10 +277,9 @@ class sqs implements queue_interface {
      * @return bool
      */
     public function is_operational() {
-        if ($client = $this->safe_client()) {
+        if ($this->queueurl) {
             // Test the queue.
-            $client->receiveMessage([
-                'QueueUrl' => $this->queueurl,
+            $this->request('ReceiveMessage', [
                 'MaxNumberOfMessages' => 1,
                 'VisibilityTimeout' => 0,
             ]);
