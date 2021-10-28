@@ -61,19 +61,19 @@ class sqs implements queue_interface {
             return;
         }
 
-        $this->config = $CFG->logstore_standardqueued['sqs'];
+        $config = $CFG->logstore_standardqueued['sqs'];
 
-        if (!isset($this->config['queue_url'])) {
+        if (!isset($config['queue_url'])) {
             $this->configerror = "No queue_url in config";
             return;
         }
-        if (!isset($this->config['proxy_url'])) {
+        if (!isset($config['proxy_url'])) {
             $this->configerror = "No proxy_url in config";
             return;
         }
 
-        $this->queueurl = $this->config['queue_url'];
-        $this->proxy = $this->config['proxy_url'];
+        $this->queueurl = $config['queue_url'];
+        $this->proxy = $config['proxy_url'];
     }
 
     /**
@@ -82,7 +82,7 @@ class sqs implements queue_interface {
      * @return curl
      */
     protected function curl() {
-        return new curl();
+        return new curl(['proxy'=>false, 'ignoresecurity' => true]);
     }
 
     /**
