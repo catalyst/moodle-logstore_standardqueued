@@ -24,8 +24,14 @@
 
 $string['pluginname'] = 'Standard log queued';
 $string['pluginname_desc'] = 'Standard log with queueing middleware.';
+$string['queuetype'] = 'Queue type';
+$string['queuetype_desc'] = 'Type of queue to use';
+$string['queuename'] = 'Queue name/url';
+$string['queuename_desc'] = 'Queue identifier (name, url, etc.)';
+$string['queueendpoint'] = 'Queue endpoint/intervface';
+$string['queueendpoint_desc'] = 'Queue interface url';
 $string['taskpull'] = 'Log table load from the queue';
-$string['notconfigured'] = 'Queue details are not configured properly in the config file "logstore_standardqueued" array, queueing will not be used: {$a}';
+$string['notconfigured'] = 'Queue details are not configured properly, queueing will not be used';
 $string['bothconfigured'] = 'Cannot have both logstore_standardqueued and logstore_standard plugins enabled. Only logstore_standard will be used.';
 $string['queue'] = 'Queue: {$a}';
 $string['checkqueue'] = 'Standard log queue';

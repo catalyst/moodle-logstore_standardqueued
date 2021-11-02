@@ -28,6 +28,8 @@ defined('MOODLE_INTERNAL') || die();
 require_once(__DIR__ . '/../../standard/tests/fixtures/event.php');
 require_once(__DIR__ . '/fixtures/store.php');
 
+use logstore_standardqueued\log\store;
+
 /**
  * Standard log store tests.
  *
@@ -39,6 +41,25 @@ require_once(__DIR__ . '/fixtures/store.php');
 class logstore_standardqueued_store_testcase extends advanced_testcase {
     /** @var string Original error log */
     protected $oldlog;
+
+    /**
+     * Tests configured_queue()
+     *
+     */
+    public function test_configured_queue() {
+        $this->resetAfterTest();
+
+        set_config('queuetype', null, 'logstore_standardqueued');
+        $this->assertNull(store::configured_queue());
+
+        set_config('queuetype', 'sqs', 'logstore_standardqueued');
+        set_config('queuename', null, 'logstore_standardqueued');
+        $this->assertNull(store::configured_queue());
+
+        set_config('queuename', 'whatever', 'logstore_standardqueued');
+        set_config('queueendpoint', 'whatever', 'logstore_standardqueued');
+        $this->assertNotNull(store::configured_queue());
+    }
 
     /**
      * Tests queued log not used when both logstore_standardqueued and logstore_standard are enabled.

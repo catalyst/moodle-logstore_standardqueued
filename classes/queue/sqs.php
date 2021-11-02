@@ -42,9 +42,6 @@ use curl;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class sqs implements queue_interface {
-    /** @var string $configerror set in case of misconfiguration */
-    public $configerror;
-
     /** @var string $queueurl AWS SQS queue url */
     protected $queueurl;
 
@@ -53,27 +50,13 @@ class sqs implements queue_interface {
 
     /**
      * Constructor.
+     *
+     * @param string $queuename
+     * @param string $queueendpoint
      */
-    public function __construct() {
-        global $CFG;
-
-        if (!isset($CFG->logstore_standardqueued['sqs'])) {
-            return;
-        }
-
-        $config = $CFG->logstore_standardqueued['sqs'];
-
-        if (!isset($config['queue_url'])) {
-            $this->configerror = "No queue_url in config";
-            return;
-        }
-        if (!isset($config['proxy_url'])) {
-            $this->configerror = "No proxy_url in config";
-            return;
-        }
-
-        $this->queueurl = $config['queue_url'];
-        $this->proxy = $config['proxy_url'];
+    public function __construct($queuename, $queueendpoint) {
+        $this->queueurl = $queuename;
+        $this->proxy = $queueendpoint;
     }
 
     /**
@@ -161,7 +144,7 @@ class sqs implements queue_interface {
             ]
         );
         $code = $client->info['http_code'];
-        if ($code >= 300) {
+        if (!$code || $code >= 300) {
             throw new moodle_exception("schedule $action: $code $ret");
         }
         return $code === 204 ? null : $ret;
@@ -268,7 +251,7 @@ class sqs implements queue_interface {
      * @return bool
      */
     public function is_configured() {
-        return $this->queueurl !== null;
+        return $this->queueurl && $this->proxy;
     }
 
     /**
@@ -277,7 +260,7 @@ class sqs implements queue_interface {
      * @return bool
      */
     public function is_operational() {
-        if ($this->queueurl) {
+        if ($this->is_configured()) {
             // Test the queue.
             $this->request('ReceiveMessage', [
                 'MaxNumberOfMessages' => 1,
@@ -285,5 +268,6 @@ class sqs implements queue_interface {
             ]);
             return true;
         }
+        return false;
     }
 }

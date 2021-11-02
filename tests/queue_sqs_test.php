@@ -211,6 +211,16 @@ class logstore_standardqueued_queue_sqs_testcase extends advanced_testcase {
     }
 
     /**
+     * Tests is_configured
+     *
+     */
+    public function test_is_configured() {
+        $sqs = new sqs(null, null);
+        $this->assertFalse($sqs->is_configured());
+        $this->assertFalse($sqs->is_operational());
+    }
+
+    /**
      * Tests pull_entries
      *
      */
@@ -241,11 +251,7 @@ class logstore_standardqueued_queue_sqs_testcase extends advanced_testcase {
                     'Messages' => []
                 ]);
             });
-        $res = $sqs->is_operational();
-        if ($sqs->configerror) {
-            throw new Exception($sqs->configerror);
-        }
-        $this->assertTrue($res);
+        $this->assertTrue($sqs->is_operational());
     }
 }
 

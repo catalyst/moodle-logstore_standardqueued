@@ -28,6 +28,8 @@ namespace logstore_standardqueued\check;
 
 defined('MOODLE_INTERNAL') || die();
 
+use Exception;
+
 use core\check\check,
     core\check\result;
 use action_link;
@@ -47,28 +49,28 @@ class queue extends check {
     public static $detailspath = "/report/status/index.php?detail=logstore_standardqueued_queue";
 
     /** @var bool $is_operational whether the configured queue is operational */
-    private static $isoperational = false;
+    private $isoperational = false;
 
     /** @var string $queuedetails configured queue details */
-    private static $queuedetails;
+    private $queuedetails;
 
     /** @var string $configerror */
-    private static $configerror;
+    private $configerror = "";
 
     /**
      * Constructor
      */
     public function __construct() {
         if ($configuredqueue = store::configured_queue()) {
-            self::$queuedetails = $configuredqueue->details();
-            if (self::$isoperational = $configuredqueue->is_operational()) {
-                self::$configerror = null;
-            } else {
-                self::$configerror = $configuredqueue->configerror;
+            $this->queuedetails = $configuredqueue->details();
+            try {
+                $this->isoperational = $configuredqueue->is_operational();
+            } catch (Exception $e) {
+                $this->configerror = "$e";
             }
         } else {
-            self::$isoperational = false;
-            self::$configerror = implode("; ", store::$configerrors);
+            $this->isoperational = false;
+            $this->configerror = "Not configured";
         }
     }
 
@@ -77,7 +79,7 @@ class queue extends check {
      * @return action_link
      */
     public function get_action_link(): ?action_link {
-        if (!self::$isoperational) {
+        if (!$this->isoperational) {
             $url = new moodle_url(self::$detailspath);
             return new action_link($url, get_string('configerror', 'logstore_standardqueued'));
         }
@@ -89,15 +91,15 @@ class queue extends check {
      * @return result
      */
     public function get_result(): result {
-        if (self::$isoperational) {
+        if ($this->isoperational) {
             $status = result::OK;
-            $summary = get_string('queue', 'logstore_standardqueued', self::$queuedetails);
-            $details = self::$queuedetails;
+            $summary = get_string('queue', 'logstore_standardqueued', $this->queuedetails);
+            $details = $this->queuedetails;
         } else {
             $status = result::ERROR;
             $summary = get_string('notconfigured', 'logstore_standardqueued');
-            $details = self::$queuedetails ? (self::$queuedetails."\n") : "";
-            $details .= $configuredqueue->configerror;
+            $details = $this->queuedetails ? ($this->queuedetails."\n") : "";
+            $details .= $this->configerror;
         }
 
         return new result($status, $summary, $details);

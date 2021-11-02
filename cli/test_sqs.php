@@ -53,7 +53,7 @@ $testevent = [
 
 $q = new logstore_standardqueued\queue\sqs;
 if (!$q->is_configured()) {
-    die ("logstore_standardqueued sqs not configured: ".$q->configerror);
+    die ("logstore_standardqueued sqs not configured");
 }
 
 $now = microtime(true);

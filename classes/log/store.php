@@ -49,9 +49,6 @@ class store extends base_store {
     /** @var array $queueclasses in the order of preference XXX config? */
     public static $queueclasses = ['sqs'];
 
-    /** @var array $configerrors queue config errors */
-    public static $configerrors = [];
-
     /** @var queue_interface $queue configired queue */
     protected $queue;
 
@@ -59,16 +56,14 @@ class store extends base_store {
      * Find first configured queue
      */
     public static function configured_queue() {
-        self::$configerrors = [];
-        foreach (self::$queueclasses as $cls) {
-            $class = "\\logstore_standardqueued\\queue\\$cls";
-            $q = new $class();
+        $queuetype = get_config('logstore_standardqueued', 'queuetype');
+        $queuename = get_config('logstore_standardqueued', 'queuename');
+        $queueendpoint = get_config('logstore_standardqueued', 'queueendpoint');
+        if ($queuetype && $queuename) {
+            $class = "\\logstore_standardqueued\\queue\\$queuetype";
+            $q = new $class($queuename, $queueendpoint);
             if ($q->is_configured()) {
                 return $q;
-            } else {
-                if ($q->configerror) {
-                    self::$configerrors[] = $q->configerror;
-                }
             }
         }
     }
@@ -92,8 +87,11 @@ class store extends base_store {
         parent::__construct($manager);
 
         $this->component = self::$replacing;
-        $this->buffersize = $this->get_config('buffersize', 0);
+        $logguests = $this->get_config('logguests', 1);
         $this->queue = self::configured_queue();
+        if ($this->queue) {
+            $this->buffersize = 0;
+        }
     }
 
     /**
@@ -127,7 +125,7 @@ class store extends base_store {
                 }
             }
         } else {
-            debugging("No queue: ".implode("\n", self::$configerrors));
+            debugging("No configured queue");
             $errorentries = $evententries;
         }
 
