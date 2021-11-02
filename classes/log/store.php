@@ -1,20 +1,20 @@
 <?php
-// This file is part of Moodle - http://moodle.org/
-//
-// Moodle is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Moodle is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
-
 /**
+ * This file is part of Moodle - http://moodle.org/
+ *
+ * Moodle is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Moodle is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+ *
  * Standard log queued reader/writer.
  *
  * @package    logstore_standardqueued
@@ -42,20 +42,24 @@ use logstore_standard\log\store as base_store;
  * @copyright  Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class store extends base_store {
-    /** @var string $replacing We pretend that we are logstore_standard */
+class store extends base_store
+{
+    // @var string $replacing We pretend that we are logstore_standard
     public static $replacing = 'logstore_standard';
 
-    /** @var array $queueclasses in the order of preference XXX config? */
+    // @var array $queueclasses in the order of preference XXX config?
     public static $queueclasses = ['sqs'];
 
-    /** @var queue_interface $queue configired queue */
+    // @var queue_interface $queue configired queue
     protected $queue;
 
     /**
      * Find first configured queue
+     *
+     * @return queue_interface
      */
-    public static function configured_queue() {
+    public static function configured_queue()
+    {
         $queuetype = get_config('logstore_standardqueued', 'queuetype');
         $queuename = get_config('logstore_standardqueued', 'queuename');
         $queueendpoint = get_config('logstore_standardqueued', 'queueendpoint');
@@ -71,9 +75,11 @@ class store extends base_store {
     /**
      * Check double logstore_standard enablement.
      *
-     * @return bool true means both logstore_standard and logstore_standardqueued are enabled
+     * @return bool true means both logstore_standard and logstore_standardqueued
+     *              are enabled
      */
-    public static function both_logstore_standard_enabled() {
+    public static function both_logstore_standard_enabled()
+    {
         $plugins = get_config('tool_log', 'enabled_stores');
         return in_array(self::$replacing, explode(',', $plugins));
     }
@@ -83,7 +89,8 @@ class store extends base_store {
      *
      * @param \tool_log\log\manager $manager Log manages.
      */
-    public function __construct(manager $manager) {
+    public function __construct(manager $manager)
+    {
         parent::__construct($manager);
 
         $this->component = self::$replacing;
@@ -99,7 +106,8 @@ class store extends base_store {
      *
      * @return bool true means new log events are being added, false means no new data will be added
      */
-    public function is_logging() {
+    public function is_logging()
+    {
         // Only enabled stpres are queried,
         // this means we can return true here unless store has some extra switch.
         return !self::both_logstore_standard_enabled();
@@ -110,7 +118,8 @@ class store extends base_store {
      *
      * @param array $evententries raw event data
      */
-    protected function insert_event_entries($evententries) {
+    protected function insert_event_entries($evententries)
+    {
         $errorentries = [];
         if ($this->queue) {
             foreach ($evententries as $entry) {
@@ -138,7 +147,8 @@ class store extends base_store {
     /**
      * Pull the events from the queue and store them.
      */
-    public function store_queued_event_entries() {
+    public function store_queued_event_entries()
+    {
         if ($this->queue) {
             $this->insert_queued_event_entries($this->queue->pull_entries());
         }
@@ -149,7 +159,8 @@ class store extends base_store {
      *
      * @param array $evententries raw event data
      */
-    protected function insert_queued_event_entries($evententries) {
+    protected function insert_queued_event_entries($evententries)
+    {
         parent::insert_event_entries($evententries);
     }
 }
