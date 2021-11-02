@@ -1,20 +1,20 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 /**
- * This file is part of Moodle - http://moodle.org/
- *
- * Moodle is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Moodle is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
- *
  * Standard log queue
  *
  * @package    logstore_standardqueued
@@ -27,7 +27,7 @@ namespace logstore_standardqueued\queue;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once $CFG->libdir . '/filelib.php';
+require_once($CFG->libdir . '/filelib.php');
 
 use Exception, JsonException;
 use moodle_exception;
@@ -41,12 +41,11 @@ use curl;
  * @copyright  Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class sqs implements queue_interface
-{
-    // @var string $queueurl AWS SQS queue url
+class sqs implements queue_interface {
+    /** @var string $queueurl AWS SQS queue url */
     protected $queueurl;
 
-    // @var string $proxy base url of a proxy service that will accept requests
+    /** @var string $proxy base url of a proxy service that will accept requests */
     protected $proxy;
 
     /**
@@ -55,8 +54,7 @@ class sqs implements queue_interface
      * @param string $queuename
      * @param string $queueendpoint
      */
-    public function __construct($queuename, $queueendpoint)
-    {
+    public function __construct($queuename, $queueendpoint) {
         $this->queueurl = $queuename;
         $this->proxy = $queueendpoint;
     }
@@ -66,8 +64,7 @@ class sqs implements queue_interface
      *
      * @return curl
      */
-    protected function curl()
-    {
+    protected function curl() {
         return new curl(['proxy' => false, 'ignoresecurity' => true]);
     }
 
@@ -75,11 +72,9 @@ class sqs implements queue_interface
      * JSON encode helper
      *
      * @param array $data to encode
-     *
      * @return string
      */
-    private function json_encode(array $data)
-    {
+    private function json_encode(array $data) {
         return json_encode(
             $data,
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR
@@ -90,11 +85,9 @@ class sqs implements queue_interface
      * JSON decode helper
      *
      * @param string $json encoded
-     *
      * @return array
      */
-    private function json_decode($json)
-    {
+    private function json_decode($json) {
         try {
             return json_decode($json, true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException $e) {
@@ -106,12 +99,10 @@ class sqs implements queue_interface
      * Make a SQS proxy schedule request
      *
      * @param string $action SQS API action
-     * @param array  $params SQS API action params without queue spec
-     *
+     * @param array $params SQS API action params without queue spec
      * @throws moodle_exception
      */
-    protected function schedule($action, array $params)
-    {
+    protected function schedule($action, array $params) {
         $this->do_request($action, $params, 'schedule', 1);
     }
 
@@ -119,13 +110,10 @@ class sqs implements queue_interface
      * Make a SQS proxy immediate request
      *
      * @param string $action SQS API action
-     * @param array  $params SQS API action params without queue spec
-     *
-     * @return array
+     * @param array $params SQS API action params without queue spec
      * @throws moodle_exception
      */
-    protected function request($action, array $params)
-    {
+    protected function request($action, array $params) {
         $ret = $this->do_request($action, $params, 'do');
         return $ret === null ? null : $this->json_decode($ret);
     }
@@ -133,16 +121,14 @@ class sqs implements queue_interface
     /**
      * Make a SQS proxy request
      *
-     * @param string $action  SQS API action
-     * @param array  $params  SQS API action params without queue spec
-     * @param string $slug    SQS API path slug
-     * @param int    $timeout connect timeout, default 3
-     *
+     * @param string $action SQS API action
+     * @param array $params SQS API action params without queue spec
+     * @param string $slug SQS API path slug
+     * @param int $timeout connect timeout, default 3
      * @return string
      * @throws moodle_exception
      */
-    private function do_request($action, array $params, $slug, $timeout = 3)
-    {
+    private function do_request($action, array $params, $slug, $timeout = 3) {
         $params['QueueUrl'] = $this->queueurl;
 
         $client = $this->curl();
@@ -169,8 +155,7 @@ class sqs implements queue_interface
      *
      * @return string
      */
-    public function details()
-    {
+    public function details() {
         return "sqs ".$this->queueurl;
     }
 
@@ -179,12 +164,10 @@ class sqs implements queue_interface
      *
      * @param array $evententry raw event data
      */
-    public function push_entry(array $evententry)
-    {
-        $this->schedule(
-            'SendMessage',
-            ['MessageBody' => $this->json_encode($evententry)]
-        );
+    public function push_entry(array $evententry) {
+        $this->schedule('SendMessage', [
+            'MessageBody' => $this->json_encode($evententry)
+        ]);
     }
 
     /**
@@ -192,8 +175,7 @@ class sqs implements queue_interface
      *
      * @param array $evententries raw event data
      */
-    public function push_entries(array $evententries)
-    {
+    public function push_entries(array $evententries) {
         $entries = [];
         foreach ($evententries as $id => $entry) {
             $entries[] = [
@@ -202,10 +184,9 @@ class sqs implements queue_interface
             ];
         }
 
-        $this->schedule(
-            'SendMessageBatch',
-            ['Entries' => $entries]
-        );
+        $this->schedule('SendMessageBatch', [
+            'Entries' => $entries,
+        ]);
     }
 
     /**
@@ -213,17 +194,15 @@ class sqs implements queue_interface
      *
      * @param int $num max number of events to pull
      */
-    public function pull_entries($num=null)
-    {
+    public function pull_entries($num=null) {
         $awsmax = 10;  // Max messages that AWS is willing to return in one go.
         $max = $num && $num < $awsmax ? $num : $awsmax;
 
         $pulled = [];
         while (true) {
-            $res = $this->request(
-                'ReceiveMessage',
-                ['MaxNumberOfMessages' => $max]
-            );
+            $res = $this->request('ReceiveMessage', [
+                'MaxNumberOfMessages' => $max,
+            ]);
 
             $msgs = $res['Messages'] ?? null;
             if (!$msgs || count($msgs) == 0) {
@@ -236,10 +215,9 @@ class sqs implements queue_interface
                 $rh = $msg['ReceiptHandle'];
 
                 try {
-                    $this->request(
-                        'DeleteMessage',
-                        ['ReceiptHandle' => $rh]
-                    );
+                    $this->request('DeleteMessage', [
+                        'ReceiptHandle' => $rh,
+                    ]);
                 } catch (Exception $e) {
                     debugging(
                         "logstore_standardqueued: Failed to delete message: $body\n".
@@ -272,8 +250,7 @@ class sqs implements queue_interface
      *
      * @return bool
      */
-    public function is_configured()
-    {
+    public function is_configured() {
         return $this->queueurl && $this->proxy;
     }
 
@@ -282,14 +259,13 @@ class sqs implements queue_interface
      *
      * @return bool
      */
-    public function is_operational()
-    {
+    public function is_operational() {
         if ($this->is_configured()) {
             // Test the queue.
-            $this->request(
-                'ReceiveMessage',
-                ['MaxNumberOfMessages' => 1, 'VisibilityTimeout' => 0]
-            );
+            $this->request('ReceiveMessage', [
+                'MaxNumberOfMessages' => 1,
+                'VisibilityTimeout' => 0,
+            ]);
             return true;
         }
         return false;

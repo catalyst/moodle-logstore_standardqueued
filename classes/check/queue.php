@@ -1,20 +1,20 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 /**
- * This file is part of Moodle - http://moodle.org/
- *
- * Moodle is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Moodle is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
- *
  * Standard log queue check
  *
  * @package    logstore_standardqueued
@@ -44,25 +44,23 @@ use logstore_standardqueued\log\store;
  * @copyright  Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class queue extends check
-{
-    // @var bool $is_operational whether the configured queue is operational
+class queue extends check {
+    /** @var bool $is_operational whether the configured queue is operational */
     public static $detailspath = "/report/status/index.php?detail=logstore_standardqueued_queue";
 
-    // @var bool $is_operational whether the configured queue is operational
+    /** @var bool $is_operational whether the configured queue is operational */
     private $isoperational = false;
 
-    // @var string $queuedetails configured queue details
+    /** @var string $queuedetails configured queue details */
     private $queuedetails;
 
-    // @var string $configerror */
+    /** @var string $configerror */
     private $configerror = "";
 
     /**
      * Constructor
      */
-    public function __construct()
-    {
+    public function __construct() {
         if ($configuredqueue = store::configured_queue()) {
             $this->queuedetails = $configuredqueue->details();
             try {
@@ -78,34 +76,24 @@ class queue extends check
 
     /**
      * Return action link
-     *
      * @return action_link
      */
-    public function get_action_link(): ?action_link
-    {
+    public function get_action_link(): ?action_link {
         if (!$this->isoperational) {
             $url = new moodle_url(self::$detailspath);
-            return new action_link(
-                $url,
-                get_string('configerror', 'logstore_standardqueued')
-            );
+            return new action_link($url, get_string('configerror', 'logstore_standardqueued'));
         }
+        return null;
     }
 
     /**
      * Return check result
-     *
      * @return result
      */
-    public function get_result(): result
-    {
+    public function get_result(): result {
         if ($this->isoperational) {
             $status = result::OK;
-            $summary = get_string(
-                'queue',
-                'logstore_standardqueued',
-                $this->queuedetails
-            );
+            $summary = get_string('queue', 'logstore_standardqueued', $this->queuedetails);
             $details = $this->queuedetails;
         } else {
             $status = result::ERROR;

@@ -1,20 +1,20 @@
 <?php
-/**
- * This file is part of Moodle - http://moodle.org/
- *
- * Moodle is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * Moodle is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
  * Standard log queue
  *
  * @package    logstore_standardqueued
@@ -41,9 +41,8 @@ defined('MOODLE_INTERNAL') || die();
  * @copyright  Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class store extends tested_store
-{
-    // @var bool
+class store extends tested_store {
+    /** @var bool */
     public static $bad = false;
 
     /**
@@ -51,8 +50,7 @@ class store extends tested_store
      *
      * @param \tool_log\log\manager $manager Log manages.
      */
-    public function __construct(manager $manager)
-    {
+    public function __construct(manager $manager) {
         parent::__construct($manager);
 
         $this->queue = self::$bad ? (new test_queue_bad()) : (new test_queue_good());
@@ -63,8 +61,7 @@ class store extends tested_store
      *
      * @return string $message exception message
      */
-    public function exception_message()
-    {
+    public function exception_message() {
         return test_queue_bad::$message;
     }
 }
@@ -77,9 +74,8 @@ class store extends tested_store
  * @copyright  Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class test_queue_good implements queue_interface
-{
-    // @var array $events 
+class test_queue_good implements queue_interface {
+    /** @var array $events */
     private static $events = [];
 
     /**
@@ -87,8 +83,7 @@ class test_queue_good implements queue_interface
      *
      * @return string $info informational string about the queue.
      */
-    public function details()
-    {
+    public function details() {
         return "test_queue good";
     }
 
@@ -97,8 +92,7 @@ class test_queue_good implements queue_interface
      *
      * @param array $evententry raw event data
      */
-    public function push_entry(array $evententry)
-    {
+    public function push_entry(array $evententry) {
         self::$events[] = $evententry;
     }
 
@@ -107,8 +101,7 @@ class test_queue_good implements queue_interface
      *
      * @param int $num max number of events to pull
      */
-    public function pull_entries($num=null)
-    {
+    public function pull_entries($num=null) {
         if (!$num) {
             $num = count(self::$events);
         }
@@ -120,8 +113,7 @@ class test_queue_good implements queue_interface
      *
      * @return bool
      */
-    public function is_configured()
-    {
+    public function is_configured() {
         return true;
     }
 
@@ -130,8 +122,7 @@ class test_queue_good implements queue_interface
      *
      * @return bool
      */
-    public function is_operational()
-    {
+    public function is_operational() {
         return true;
     }
 }
@@ -144,18 +135,16 @@ class test_queue_good implements queue_interface
  * @copyright  Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class test_queue_bad implements queue_interface
-{
-    // @var string $events
+class test_queue_bad implements queue_interface {
+    /** @var string $events */
     public static $message = "I'm bad";
 
     /**
      * A line describing the queue and its config.
      *
-     * @return string $info informational string about the queue
+     * @return string $info informational string about the queue.
      */
-    public function details()
-    {
+    public function details() {
         return "test_queue bad";
     }
 
@@ -164,8 +153,7 @@ class test_queue_bad implements queue_interface
      *
      * @param array $evententry raw event data
      */
-    public function push_entry(array $evententry)
-    {
+    public function push_entry(array $evententry) {
         throw new Exception(self::$message);
     }
 
@@ -174,8 +162,7 @@ class test_queue_bad implements queue_interface
      *
      * @param int $num max number of events to pull
      */
-    public function pull_entries($num=null)
-    {
+    public function pull_entries($num=null) {
         return [];
     }
 
@@ -184,8 +171,7 @@ class test_queue_bad implements queue_interface
      *
      * @return bool
      */
-    public function is_configured()
-    {
+    public function is_configured() {
         return true;
     }
 
@@ -194,8 +180,7 @@ class test_queue_bad implements queue_interface
      *
      * @return bool
      */
-    public function is_operational()
-    {
+    public function is_operational() {
         return true;
     }
 }
