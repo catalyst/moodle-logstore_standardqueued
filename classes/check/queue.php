@@ -61,16 +61,22 @@ class queue extends check {
      * Constructor
      */
     public function __construct() {
-        if ($configuredqueue = store::configured_queue()) {
-            $this->queuedetails = $configuredqueue->details();
-            try {
-                $this->isoperational = $configuredqueue->is_operational();
-            } catch (Exception $e) {
-                $this->configerror = "$e";
+        $enabledlogstores = explode(',', get_config('tool_log', 'enabled_stores'));
+        if (in_array('logstore_standardqueued', $enabledlogstores)) {
+            if ($configuredqueue = store::configured_queue()) {
+                $this->queuedetails = $configuredqueue->details();
+                try {
+                    $this->isoperational = $configuredqueue->is_operational();
+                } catch (Exception $e) {
+                    $this->configerror = "$e";
+                }
+            } else {
+                $this->isoperational = false;
+                $this->configerror = "Not configured";
             }
         } else {
             $this->isoperational = false;
-            $this->configerror = "Not configured";
+            $this->configerror = "Not enabled";
         }
     }
 
