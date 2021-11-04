@@ -41,19 +41,19 @@ if ($hassiteconfig) {
         'logstore_standardqueued/queuetype',
         new lang_string('queuetype', 'logstore_standardqueued'),
         new lang_string('queuetype_desc', 'logstore_standardqueued'),
-        0, array_combine(store::$queueclasses, store::$queueclasses)
+        null, array_combine(store::$queueclasses, store::$queueclasses)
     ));
     $settings->add(new admin_setting_configtext(
         'logstore_standardqueued/queuename',
         new lang_string('queuename', 'logstore_standardqueued'),
         new lang_string('queuename_desc', 'logstore_standardqueued'),
-        1
+        null
     ));
     $settings->add(new admin_setting_configtext(
         'logstore_standardqueued/queueendpoint',
         new lang_string('queueendpoint', 'logstore_standardqueued'),
         new lang_string('queueendpoint_desc', 'logstore_standardqueued'),
-        1
+        null
     ));
 
     $configuredqueue = store::configured_queue();
