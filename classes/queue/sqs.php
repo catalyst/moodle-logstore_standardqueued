@@ -103,7 +103,7 @@ class sqs implements queue_interface {
      * @throws moodle_exception
      */
     protected function schedule($action, array $params) {
-        $this->do_request($action, $params, 'schedule', 1);
+        $this->do_request("/schedule/sqs/$action", $params, 1);
     }
 
     /**
@@ -114,26 +114,26 @@ class sqs implements queue_interface {
      * @throws moodle_exception
      */
     protected function request($action, array $params) {
-        $ret = $this->do_request($action, $params, 'do');
+        $ret = $this->do_request("/do/sqs/$action", $params);
         return $ret === null ? null : $this->json_decode($ret);
     }
 
     /**
      * Make a SQS proxy request
      *
-     * @param string $action SQS API action
+     * @param string $method HTTP method, "post" or "get"
+     * @param string $path HTTP request path
      * @param array $params SQS API action params without queue spec
-     * @param string $slug SQS API path slug
      * @param int $timeout connect timeout, default 3
      * @return string
      * @throws moodle_exception
      */
-    private function do_request($action, array $params, $slug, $timeout = 3) {
+    private function do_request($path, array $params, $timeout = 3) {
         $params['QueueUrl'] = $this->queueurl;
 
         $client = $this->curl();
         $ret = $client->post(
-            $this->proxy."/$slug/sqs/$action",
+            $this->proxy.$path,
             $this->json_encode($params),
             [
                 'CURLOPT_HTTPHEADER' => [
@@ -145,7 +145,7 @@ class sqs implements queue_interface {
         );
         $code = $client->info['http_code'];
         if (!$code || $code >= 300) {
-            throw new moodle_exception("schedule $action: $code $ret");
+            throw new moodle_exception("$path: $code $ret");
         }
         return $code === 204 ? null : $ret;
     }
@@ -199,49 +199,77 @@ class sqs implements queue_interface {
         $max = $num && $num < $awsmax ? $num : $awsmax;
 
         $pulled = [];
-        while (true) {
-            $res = $this->request('ReceiveMessage', [
-                'MaxNumberOfMessages' => $max,
-            ]);
+        try {
+            while (true) {
+                $res = $this->request('ReceiveMessage', [
+                    'MaxNumberOfMessages' => $max,
+                ]);
 
-            $msgs = $res['Messages'] ?? null;
-            if (!$msgs || count($msgs) == 0) {
-                break;
+                $msgs = $res['Messages'] ?? null;
+                if (!$msgs || count($msgs) == 0) {
+                    break;
+                }
+
+                foreach ($msgs as $msg) {
+                    $body = $msg['Body'];
+                    $id = $msg['MessageId'];
+                    $rh = $msg['ReceiptHandle'];
+
+                    try {
+                        $this->request('DeleteMessage', [
+                            'ReceiptHandle' => $rh,
+                        ]);
+                    } catch (Exception $e) {
+                        debugging(
+                            "logstore_standardqueued: Failed to delete message: $body\n".
+                            $e->getMessage()
+                        );
+                        continue;
+                    }
+
+                    try {
+                        $pulled[] = $this->json_decode($body);
+                    } catch (JsonException $e) {
+                        debugging(
+                            "logstore_standardqueued: Message decode error: $body\n".
+                            $e->getMessage()
+                        );
+                        // Nothing we can do about it at this stage.
+                        continue;
+                    }
+                }
+
+                if ($num && count($pulled) >= $num) {
+                    break;
+                }
             }
+        } catch (Exception $e) {
+            debugging("logstore_standardqueued: ". $e->getMessage());
+        }
 
-            foreach ($msgs as $msg) {
-                $body = $msg['Body'];
-                $id = $msg['MessageId'];
-                $rh = $msg['ReceiptHandle'];
-
+        try {
+            $ret = $this->do_request("/failed", []);
+            foreach ($this->json_decode($ret)["failed"] as $failed) {
                 try {
-                    $this->request('DeleteMessage', [
-                        'ReceiptHandle' => $rh,
-                    ]);
+                    $params = $failed['params'];
+                    $message = $params['MessageBody'];
+                    $error = $failed['error'];
+                    debugging("logstore_standardqueued: proxy error: $error");
+
+                    $entry = $this->json_decode($message);
+                    $this->do_request("/failed/clean", ['MessageBody' => $message]);
+                    $pulled[] = $entry;
                 } catch (Exception $e) {
                     debugging(
-                        "logstore_standardqueued: Failed to delete message: $body\n".
-                        $e->getMessage()
+                        "logstore_standardqueued: ". $e->getMessage().
+                        "\n".print_r($failed, true)
                     );
-                    continue;
-                }
-
-                try {
-                    $pulled[] = $this->json_decode($body);
-                } catch (JsonException $e) {
-                    debugging(
-                        "logstore_standardqueued: Message decode error: $body\n".
-                        $e->getMessage()
-                    );
-                    // Nothing we can do about it at this stage.
-                    continue;
                 }
             }
-
-            if ($num && count($pulled) >= $num) {
-                break;
-            }
+        } catch (Exception $e) {
+            debugging("logstore_standardqueued: ". $e->getMessage());
         }
+
         return $pulled;
     }
 

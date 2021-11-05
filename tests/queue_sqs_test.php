@@ -135,13 +135,15 @@ class logstore_standardqueued_queue_sqs_testcase extends advanced_testcase {
 
         $messagereceipthandle = 'ReceiptHandle';
         $evententry = ['a' => "b"];
+        $eventfailedentry = ['c' => "d"];
+        $error = "Error";
         $curloptions = $this->curl_options(3);
-        $sqs->client->expects($this->exactly(3))
+        $sqs->client->expects($this->exactly(5))
             ->method('post')
             ->withConsecutive(
                 [
                     $this->equalTo($sqs->request_action_url('ReceiveMessage')),
-                    $this->callback(function($json) use ($sqs, $evententry) {
+                    $this->callback(function($json) use ($sqs) {
                         $this->assertEquals([
                             'QueueUrl' => $sqs->queueurl,
                             'MaxNumberOfMessages' => 10,
@@ -152,7 +154,7 @@ class logstore_standardqueued_queue_sqs_testcase extends advanced_testcase {
                 ],
                 [
                     $this->equalTo($sqs->request_action_url('DeleteMessage')),
-                    $this->callback(function($json) use ($sqs, $messagereceipthandle, $evententry) {
+                    $this->callback(function($json) use ($sqs, $messagereceipthandle) {
                         $this->assertEquals([
                             'QueueUrl' => $sqs->queueurl,
                             'ReceiptHandle' => $messagereceipthandle,
@@ -163,7 +165,7 @@ class logstore_standardqueued_queue_sqs_testcase extends advanced_testcase {
                 ],
                 [
                     $this->equalTo($sqs->request_action_url('ReceiveMessage')),
-                    $this->callback(function($json) use ($sqs, $evententry) {
+                    $this->callback(function($json) use ($sqs) {
                         $this->assertEquals([
                             'QueueUrl' => $sqs->queueurl,
                             'MaxNumberOfMessages' => 10,
@@ -172,42 +174,87 @@ class logstore_standardqueued_queue_sqs_testcase extends advanced_testcase {
                     }),
                     $this->equalTo($curloptions)
                 ],
+                [
+                    $this->equalTo($sqs->request_failed_url()),
+                    $this->callback(function($json) use ($sqs) {
+                        $this->assertEquals([
+                            'QueueUrl' => $sqs->queueurl,
+                        ], $this->json_decode($json));
+                        return true;
+                    }),
+                    $this->equalTo($curloptions)
+                ],
+                [
+                    $this->equalTo($sqs->request_failed_url(true)),
+                    $this->callback(function($json) use ($sqs, $eventfailedentry) {
+                        $this->assertEquals([
+                            'QueueUrl' => $sqs->queueurl,
+                            'MessageBody' => $this->json_encode($eventfailedentry),
+                        ], $this->json_decode($json));
+                        return true;
+                    }),
+                    $this->equalTo($curloptions)
+                ],
             )
-            ->willReturnCallback(function($endpoint, $json, $options) use ($sqs, $messagereceipthandle, $evententry) {
-                if (strpos($endpoint, 'ReceiveMessage') !== false) {
-                    static $first = true;
+            ->willReturnCallback(
+                function(
+                    $endpoint, $json, $options
+                ) use (
+                    $sqs, $messagereceipthandle, $evententry, $eventfailedentry, $error
+                ) {
+                    if (strpos($endpoint, 'ReceiveMessage') !== false) {
+                        static $first = true;
 
-                    $sqs->client->info = [
-                        'http_code' => 200,
-                    ];
+                        $sqs->client->info = [
+                            'http_code' => 200,
+                        ];
 
-                    if ($first) {
-                        $first = false;
-                        $messageid = 'Id';
+                        if ($first) {
+                            $first = false;
+                            $messageid = 'Id';
+                            return $this->json_encode([
+                                'Messages' => [
+                                    [
+                                        'MessageId' => $messageid,
+                                        'ReceiptHandle' => $messagereceipthandle,
+                                        'Body' => $this->json_encode($evententry)
+                                    ],
+                                ]
+                            ]);
+                        }
+
+                        return "{}";
+                    }
+
+                    if (strpos($endpoint, 'DeleteMessage') !== false) {
+                        $sqs->client->info = [
+                            'http_code' => 204,
+                        ];
+                        return "";
+                    }
+
+                    if (strpos($endpoint, '/failed') !== false) {
                         return $this->json_encode([
-                            'Messages' => [
+                            'failed' => [
                                 [
-                                    'MessageId' => $messageid,
-                                    'ReceiptHandle' => $messagereceipthandle,
-                                    'Body' => $this->json_encode($evententry)
+                                    'params' => [
+                                        'Action' => 'SendMessage',
+                                        'QueueUrl' => $sqs->queueurl,
+                                        'MessageBody' => $this->json_encode(
+                                            $eventfailedentry
+                                        )
+                                    ],
+                                    'error' => $error,
                                 ],
                             ]
                         ]);
                     }
 
-                    return "{}";
+                    throw new Exception("Unexpected call $endpoint");
                 }
-
-                if (strpos($endpoint, 'DeleteMessage') !== false) {
-                    $sqs->client->info = [
-                        'http_code' => 204,
-                    ];
-                    return "";
-                }
-
-                throw new Exception("Unexpected call $endpoint");
-            });
-        $this->assertSame([$evententry], $sqs->pull_entries());
+            );
+        $this->assertSame([$evententry, $eventfailedentry], $sqs->pull_entries());
+        $this->assertDebuggingCalled("logstore_standardqueued: proxy error: $error");
     }
 
     /**
@@ -301,6 +348,16 @@ class t_sqs extends sqs {
      */
     public function request_action_url($action) {
         return $this->proxy."/do/sqs/$action";
+    }
+
+    /**
+     * Request failed url test helper
+     *
+     * @param bool $clean
+     * @return string
+     */
+    public function request_failed_url($clean = false) {
+        return $this->proxy."/failed".($clean ? "/clean" : "");
     }
 
     /**
