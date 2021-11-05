@@ -121,7 +121,6 @@ class sqs implements queue_interface {
     /**
      * Make a SQS proxy request
      *
-     * @param string $method HTTP method, "post" or "get"
      * @param string $path HTTP request path
      * @param array $params SQS API action params without queue spec
      * @param int $timeout connect timeout, default 3
@@ -253,12 +252,16 @@ class sqs implements queue_interface {
                 try {
                     $params = $failed['params'];
                     $message = $params['MessageBody'];
-                    $error = $failed['error'];
-                    debugging("logstore_standardqueued: proxy error: $error");
 
-                    $entry = $this->json_decode($message);
-                    $this->do_request("/failed/clean", ['MessageBody' => $message]);
-                    $pulled[] = $entry;
+                    try {
+                        $entry = $this->json_decode($message);
+                        $pulled[] = $entry;
+
+                        $error = $failed['error'];
+                        debugging("logstore_standardqueued: proxy error: $error");
+                    } finally {
+                        $this->do_request("/failed/clean", ['MessageBody' => $message]);
+                    }
                 } catch (Exception $e) {
                     debugging(
                         "logstore_standardqueued: ". $e->getMessage().
