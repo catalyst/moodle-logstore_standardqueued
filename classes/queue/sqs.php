@@ -248,26 +248,30 @@ class sqs implements queue_interface {
 
         try {
             $ret = $this->do_request("/failed", []);
-            foreach ($this->json_decode($ret)["failed"] as $failed) {
-                try {
-                    $params = $failed['params'];
-                    $message = $params['MessageBody'];
-
+            try {
+                foreach ($this->json_decode($ret)["failed"] as $failed) {
                     try {
-                        $entry = $this->json_decode($message);
-                        $pulled[] = $entry;
+                        $params = $failed['params'];
+                        $message = $params['MessageBody'];
 
-                        $error = $failed['error'];
-                        debugging("logstore_standardqueued: proxy error: $error");
-                    } finally {
-                        $this->do_request("/failed/clean", ['MessageBody' => $message]);
+                        try {
+                            $entry = $this->json_decode($message);
+                            $pulled[] = $entry;
+
+                            $error = $failed['error'];
+                            debugging("logstore_standardqueued: proxy error: $error");
+                        } finally {
+                            $this->do_request("/failed/clean", ['MessageBody' => $message]);
+                        }
+                    } catch (Exception $e) {
+                        debugging(
+                            "logstore_standardqueued: ". $e->getMessage().
+                            "\n".var_export($failed, true)
+                        );
                     }
-                } catch (Exception $e) {
-                    debugging(
-                        "logstore_standardqueued: ". $e->getMessage().
-                        "\n".print_r($failed, true)
-                    );
                 }
+            } catch (Exception $e) {
+                debugging("logstore_standardqueued: ". $e->getMessage()."\n$ret");
             }
         } catch (Exception $e) {
             debugging("logstore_standardqueued: ". $e->getMessage());
