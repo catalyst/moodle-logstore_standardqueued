@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Standard log reader/writer.
+ * Adhoc task that performs asynchronous log entries pull from queue.
  *
  * @package    logstore_standardqueued
  * @copyright  Catalyst IT
@@ -28,34 +28,33 @@ defined('MOODLE_INTERNAL') || die();
 
 use logstore_standardqueued\log\store;
 
-use core\task\scheduled_task;
+use core\task\adhoc_task;
+
 
 /**
- * Standard log reader/writer.
+ * Adhoc task that performs asynchronous log entries pull from queue.
  *
  * @package    logstore_standardqueued
  * @copyright  Catalyst IT
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class pull_task extends scheduled_task {
+class asynchronous_pull_task extends adhoc_task {
 
     /**
-     * Get a descriptive name for this task (shown to admins).
-     *
-     * @return string
+     * Constructor
      */
-    public function get_name() {
-        return get_string('taskpull', 'logstore_standardqueued');
+    public function __construct() {
+        $this->set_blocking(false);
+        $this->set_component('logstore_standardqueued');
     }
 
     /**
-     * Do the job.
-     * Throw exceptions on errors (the job will be retried).
+     * Run the adhoc task and preform the backup.
      */
     public function execute() {
-        $asynctask = new asynchronous_pull_task();
-        \core\task\manager::queue_adhoc_task($asynctask);
+        $store = new store(get_log_manager());
+        $store->store_queued_event_entries();
 
-        mtrace(" Queued async pull log records from the queue task.");
+        mtrace("Pulled log records from the queue.");
     }
 }

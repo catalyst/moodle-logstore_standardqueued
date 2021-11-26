@@ -52,6 +52,9 @@ class store extends base_store {
     /** @var queue_interface $queue configired queue */
     protected $queue;
 
+    /** @var Max number of records to write to the db */
+    protected $writerecnum = 200;
+
     /**
      * Find first configured queue
      */
@@ -87,7 +90,6 @@ class store extends base_store {
         parent::__construct($manager);
 
         $this->component = self::$replacing;
-        $logguests = $this->get_config('logguests', 1);
         $this->queue = self::configured_queue();
         if ($this->queue) {
             $this->buffersize = 0;
@@ -140,7 +142,13 @@ class store extends base_store {
      */
     public function store_queued_event_entries() {
         if ($this->queue) {
-            $this->insert_queued_event_entries($this->queue->pull_entries());
+            while (true) {
+                $pulled = $this->queue->pull_entries($this->writerecnum);
+                $this->insert_queued_event_entries($pulled);
+                if (count($pulled) < $this->writerecnum) {
+                    break;
+                }
+            }
         }
     }
 

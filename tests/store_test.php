@@ -142,7 +142,7 @@ class logstore_standardqueued_store_testcase extends advanced_testcase {
         $logs = $DB->get_records('logstore_standard_log', array(), 'id ASC');
         $this->assertCount(0, $logs);
 
-        // Verbatim from \logstore_standardqueued\task\pull_task::execute().
+        // Verbatim from \logstore_standardqueued\task\asynchronous_pull_task::execute().
         $store = new \logstore_standardqueued_test\log\store($manager);
         $store->store_queued_event_entries();
 
