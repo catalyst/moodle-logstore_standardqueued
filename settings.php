@@ -28,13 +28,62 @@ use logstore_standardqueued\check\queue;
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
+    // Check if we are actually on the settings page, or in correct category page.
+    $caturl = new moodle_url('/admin/category.php');
+    $pageurl = new moodle_url('/admin/settings.php');
+    $onsettingspage = false;
+
+    if ($PAGE->has_set_url()) {
+        $thisurl = $PAGE->url;
+        if (($caturl->compare($thisurl, URL_MATCH_BASE) && $thisurl->get_param('category') == 'logging') ||
+            ($pageurl->compare($thisurl,  URL_MATCH_BASE) && $thisurl->get_param('section') == 'logsettingstandardqueued')) {
+            $onsettingspage = true;
+        }
+    }
+
     $warntext = '';
 
     if (store::both_logstore_standard_enabled()) {
         $warntext  = $OUTPUT->notification(
             get_string('bothconfigured', 'logstore_standardqueued'),
-            core\output\notification::NOTIFY_WARNING
+            core\output\notification::NOTIFY_ERROR
         );
+
+        $settings->add(new admin_setting_heading('logstore_standardqueued/bothconfigured', '', $warntext));
+    }
+
+    if ($onsettingspage) {
+        $configuredqueue = store::configured_queue();
+
+        if (!$configuredqueue) {
+            $warntext = $OUTPUT->notification(
+                get_string('queuenotconfigured', 'logstore_standardqueued'),
+                core\output\notification::NOTIFY_WARNING
+            );
+        } else {
+            $url = new moodle_url(queue::$detailspath);
+
+            try {
+                $isoperational = $configuredqueue->is_operational();
+            } catch (Exception $e) {
+                $isoperational = false;
+            }
+
+            if (!$isoperational) {
+                $statuslink = html_writer::link($url, get_string('statuspage', 'logstore_standardqueued'));
+                $warntext = $OUTPUT->notification(
+                    get_string('queuenotfunctional', 'logstore_standardqueued', $statuslink),
+                    core\output\notification::NOTIFY_ERROR
+                );
+            } else {
+                $warntext = $OUTPUT->notification(
+                    get_string('queuetested', 'logstore_standardqueued', $configuredqueue->details()),
+                    core\output\notification::NOTIFY_SUCCESS
+                );
+            }
+        }
+
+        $settings->add(new admin_setting_heading('logstore_standardqueued/queuestatus', '', $warntext));
     }
 
     $settings->add(new admin_setting_configselect(
@@ -56,21 +105,5 @@ if ($hassiteconfig) {
         null
     ));
 
-    $configuredqueue = store::configured_queue();
-    if ($configuredqueue) {
-        $url = new moodle_url(queue::$detailspath);
-        $warntext = $OUTPUT->notification(
-            get_string('queue', 'logstore_standardqueued', $configuredqueue->details())." ".html_writer::link($url, "Details"),
-            core\output\notification::NOTIFY_SUCCESS
-        );
-        $settings->add(new admin_setting_heading('logstore_standardqueued/generalsettings', '', $warntext));
-    } else {
-        $warntext = $OUTPUT->notification(
-            get_string('notconfigured', 'logstore_standardqueued'),
-            core\output\notification::NOTIFY_WARNING
-        );
-        $settings->add(new admin_setting_heading('logstore_standardqueued/generalsettings', '', $warntext));
-
-        require(__DIR__ . "/../standard/settings.php");
-    }
+    require(__DIR__ . "/../standard/settings.php");
 }
