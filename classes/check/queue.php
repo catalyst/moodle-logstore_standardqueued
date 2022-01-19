@@ -72,11 +72,11 @@ class queue extends check {
                 }
             } else {
                 $this->isoperational = false;
-                $this->configerror = "Not configured";
+                $this->configerror = get_string('notconfigured', 'logstore_standardqueued');
             }
         } else {
             $this->isoperational = false;
-            $this->configerror = "Not enabled";
+            $this->configerror = get_string('notenabled', 'logstore_standardqueued');
         }
     }
 
@@ -103,7 +103,7 @@ class queue extends check {
             $details = $this->queuedetails;
         } else {
             $status = result::ERROR;
-            $summary = get_string('notconfigured', 'logstore_standardqueued');
+            $summary = get_string('queuenotconfigured', 'logstore_standardqueued');
             $details = $this->queuedetails ? ($this->queuedetails."\n") : "";
             $details .= $this->configerror;
         }

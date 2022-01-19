@@ -31,7 +31,11 @@ defined('MOODLE_INTERNAL') || die();
  * @return array of check objects
  */
 function logstore_standardqueued_status_checks() : array {
-    return [
-        new \logstore_standardqueued\check\queue(),
-    ];
+    if (in_array('logstore_standardqueued', explode(',', get_config('tool_log', 'enabled_stores')))) {
+        return [
+            new \logstore_standardqueued\check\queue(),
+        ];
+    } else {
+        return [];
+    }
 }
