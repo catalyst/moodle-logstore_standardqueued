@@ -24,8 +24,6 @@
 
 namespace logstore_standardqueued\task;
 
-defined('MOODLE_INTERNAL') || die();
-
 use logstore_standardqueued\log\store;
 
 use core\task\adhoc_task;

@@ -24,8 +24,6 @@
 
 namespace logstore_standardqueued\queue;
 
-defined('MOODLE_INTERNAL') || die();
-
 interface queue_interface {
     /**
      * A line describing the queue and its config.

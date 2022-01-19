@@ -26,12 +26,10 @@
 
 namespace logstore_standardqueued\check;
 
-defined('MOODLE_INTERNAL') || die();
-
 use Exception;
 
-use core\check\check,
-    core\check\result;
+use core\check\check;
+use core\check\result;
 use action_link;
 use moodle_url;
 use logstore_standardqueued\log\store;

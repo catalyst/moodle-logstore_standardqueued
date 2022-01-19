@@ -25,8 +25,6 @@
 
 namespace logstore_standardqueued\privacy;
 
-defined('MOODLE_INTERNAL') || die();
-
 use logstore_standard\privacy\provider as base_provider;
 
 /**
