@@ -25,8 +25,6 @@
 
 namespace logstore_standardqueued\log;
 
-defined('MOODLE_INTERNAL') || die();
-
 use Exception;
 
 use tool_log\log\manager;
