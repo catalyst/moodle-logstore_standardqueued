@@ -14,15 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Standard log enabled check
- *
- * @package    logstore_standardqueued
- * @author     Dmitrii Metelkin
- * @copyright  Catalyst IT
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace logstore_standardqueued\check;
 
 use core\check\check;
@@ -51,7 +42,7 @@ class enabled extends check {
 
     /**
      * Return action link
-     * @return action_link
+     * @return ?action_link
      */
     public function get_action_link(): ?action_link {
         if ($this->is_check_failed()) {
@@ -74,9 +65,7 @@ class enabled extends check {
             $summary = get_string('enabledcorrectly', 'logstore_standardqueued');
         }
 
-        $details = '';
-
-        return new result($status, $summary, $details);
+        return new result($status, $summary);
     }
 
 }
