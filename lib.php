@@ -31,6 +31,7 @@
 function logstore_standardqueued_status_checks() : array {
     if (in_array('logstore_standardqueued', explode(',', get_config('tool_log', 'enabled_stores')))) {
         return [
+            new \logstore_standardqueued\check\enabled(),
             new \logstore_standardqueued\check\queue(),
         ];
     } else {
