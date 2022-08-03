@@ -34,8 +34,8 @@ and write as much as possible.
 ## How are events queued?
 
 A DB connection and write is already fairly fast and cheap so whatever it is
-eplaced with must be extremely low latency and cheaper while balancing that
-again reliability and robustness. This plugin will flexibly allow different
+replaced with must be extremely low latency and cheaper while balancing that
+against reliability and robustness. This plugin will flexibly allow different
 queue methods. The intention is that a single front end might have a very short
 lived buffer which is accepting events from many php requests, and then doing a
 much faster single batch insert. Or it may push them to a more decentralized
