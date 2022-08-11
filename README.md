@@ -1,5 +1,9 @@
 ![Build Status](https://github.com/catalyst/moodle-logstore_standardqueued/actions/workflows/ci.yml/badge.svg?branch=main)
 
+This repository has been archived and no longer will be supported. Please see
+[the issue](https://github.com/catalyst/moodle-logstore_standardqueued/issues/25)
+for more details.
+
 # moodle-logstore_standardqueued
 
 This is a Moodle logstore which queues logs via an intermediate fast queue and
